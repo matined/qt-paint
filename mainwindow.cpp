@@ -109,7 +109,8 @@ void MainWindow::onChangeColor()
 {
     QColor color = QColorDialog::getColor(Qt::black, this, "Select Color");
     if (color.isValid()) {
-        // To be implemented - set color for new shapes
+        canvas->setColorMode(true);
+        statusLabel->setText("Mode: Color Change (Click on an object to change its color)");
     }
 }
 

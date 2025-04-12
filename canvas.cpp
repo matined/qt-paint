@@ -2,6 +2,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QDebug>
+#include <QColorDialog>
 
 Canvas::Canvas(QWidget *parent)
     : QWidget(parent)
@@ -59,7 +60,43 @@ void Canvas::mousePressEvent(QMouseEvent *event)
         m_lastPoint = event->pos();
         qDebug() << "Mouse press at:" << m_lastPoint;
         
-        if (m_isDrawing) {
+        if (m_isColorMode) {
+            // Check for line selection
+            for (const auto& line : m_lines) {
+                if (line->contains(m_lastPoint)) {
+                    QColor color = QColorDialog::getColor(line->getColor(), this, "Select Color");
+                    if (color.isValid()) {
+                        line->setColor(color);
+                        update();
+                    }
+                    return;
+                }
+            }
+            
+            // Check for circle selection
+            for (const auto& circle : m_circles) {
+                if (circle->contains(m_lastPoint)) {
+                    QColor color = QColorDialog::getColor(circle->getColor(), this, "Select Color");
+                    if (color.isValid()) {
+                        circle->setColor(color);
+                        update();
+                    }
+                    return;
+                }
+            }
+            
+            // Check for polygon selection
+            for (const auto& polygon : m_polygons) {
+                if (polygon->contains(m_lastPoint)) {
+                    QColor color = QColorDialog::getColor(polygon->getColor(), this, "Select Color");
+                    if (color.isValid()) {
+                        polygon->setColor(color);
+                        update();
+                    }
+                    return;
+                }
+            }
+        } else if (m_isDrawing) {
             // Start drawing a new line
             m_currentLine = new Line(m_lastPoint, m_lastPoint);
             qDebug() << "Started new line";
