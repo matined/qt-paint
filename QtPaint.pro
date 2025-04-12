@@ -10,10 +10,16 @@ CONFIG += c++17
 
 SOURCES += \
     main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    line.cpp \
+    canvas.cpp \
+    brush.cpp
 
 HEADERS += \
-    mainwindow.h
+    mainwindow.h \
+    line.h \
+    canvas.h \
+    brush.h
 
 FORMS += \
     mainwindow.ui

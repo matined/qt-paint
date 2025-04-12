@@ -2,6 +2,10 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QWidget>
+#include <QPushButton>
+#include <QLabel>
+#include "canvas.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -19,5 +23,40 @@ public:
 
 private:
     Ui::MainWindow *ui;
+    Canvas *canvas;
+    QLabel *statusLabel;
+    
+    // Drawing tool buttons
+    QPushButton *btnDrawLine;
+    QPushButton *btnDrawCircle;
+    QPushButton *btnDrawPolygon;
+    QPushButton *btnResetMode;
+    
+    // Style buttons
+    QPushButton *btnChangeColor;
+    QPushButton *btnThicken;
+    QPushButton *btnToggleAntiAliasing;
+    
+    // File operation buttons
+    QPushButton *btnSave;
+    QPushButton *btnLoad;
+    QPushButton *btnRemoveAll;
+
+private slots:
+    // Drawing tool slots
+    void onDrawLine();
+    void onDrawCircle();
+    void onDrawPolygon();
+    void onResetMode();
+    
+    // Style slots
+    void onChangeColor();
+    void onThicken();
+    void onToggleAntiAliasing();
+    
+    // File operation slots
+    void onSave();
+    void onLoad();
+    void onRemoveAll();
 };
 #endif // MAINWINDOW_H
