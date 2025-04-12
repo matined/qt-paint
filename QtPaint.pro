@@ -14,14 +14,16 @@ SOURCES += \
     line.cpp \
     canvas.cpp \
     brush.cpp \
-    circle.cpp
+    circle.cpp \
+    polygon.cpp
 
 HEADERS += \
     mainwindow.h \
     line.h \
     canvas.h \
     brush.h \
-    circle.h
+    circle.h \
+    polygon.h
 
 FORMS += \
     mainwindow.ui

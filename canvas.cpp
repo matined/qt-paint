@@ -32,6 +32,11 @@ void Canvas::paintEvent(QPaintEvent *event)
         circle->draw(painter);
     }
     
+    // Draw all polygons
+    for (const auto& polygon : m_polygons) {
+        polygon->draw(painter);
+    }
+    
     // Draw current line if exists
     if (m_currentLine) {
         m_currentLine->draw(painter);
@@ -40,6 +45,11 @@ void Canvas::paintEvent(QPaintEvent *event)
     // Draw current circle if exists
     if (m_currentCircle) {
         m_currentCircle->draw(painter);
+    }
+    
+    // Draw current polygon if exists
+    if (m_currentPolygon) {
+        m_currentPolygon->draw(painter);
     }
 }
 
@@ -57,32 +67,88 @@ void Canvas::mousePressEvent(QMouseEvent *event)
             // Start drawing a new circle
             m_currentCircle = new Circle(m_lastPoint, 0);
             qDebug() << "Started new circle";
+        } else if (m_isPolygonMode) {
+            if (!m_currentPolygon) {
+                // Start a new polygon
+                m_currentPolygon = new Polygon();
+                m_currentPolygon->addVertex(m_lastPoint);
+                qDebug() << "Started new polygon";
+            } else {
+                // Check if we're closing the polygon
+                if (m_currentPolygon->getVertexCount() >= 3) {
+                    QPoint firstVertex = m_currentPolygon->getVertex(0);
+                    int dx = m_lastPoint.x() - firstVertex.x();
+                    int dy = m_lastPoint.y() - firstVertex.y();
+                    int distanceSquared = dx * dx + dy * dy;
+                    
+                    if (distanceSquared <= 100) { // 10 pixel threshold
+                        m_currentPolygon->close();
+                        addPolygon(std::unique_ptr<Polygon>(m_currentPolygon));
+                        m_currentPolygon = nullptr;
+                        qDebug() << "Polygon closed";
+                        return;
+                    }
+                }
+                
+                // Add new vertex
+                m_currentPolygon->addVertex(m_lastPoint);
+                qDebug() << "Added vertex to polygon";
+            }
+            update(); // Force update to show the current polygon
         } else if (m_isThicknessMode) {
-            // Check if we clicked on a line to increase its thickness
+            // Check if we clicked on a line or polygon to change thickness
             for (const auto& line : m_lines) {
                 if (line->contains(m_lastPoint)) {
                     handleThicknessChange(line.get(), true);
                     break;
                 }
             }
-        } else {
-            // Check if we clicked on a circle's center or radius point
-            for (const auto& circle : m_circles) {
-                if (circle->isNearCenter(m_lastPoint)) {
-                    m_selectedCircle = circle.get();
-                    m_isDraggingCenter = true;
-                    qDebug() << "Selected circle center";
+            for (const auto& polygon : m_polygons) {
+                if (polygon->contains(m_lastPoint)) {
+                    handlePolygonThicknessChange(polygon.get(), true);
                     break;
-                } else if (circle->isNearRadius(m_lastPoint)) {
-                    m_selectedCircle = circle.get();
-                    m_isDraggingRadius = true;
-                    qDebug() << "Selected circle radius";
+                }
+            }
+        } else {
+            // Check for polygon vertex/edge selection
+            for (const auto& polygon : m_polygons) {
+                int vertexIndex;
+                if (polygon->isNearVertex(m_lastPoint, vertexIndex)) {
+                    m_selectedPolygon = polygon.get();
+                    m_selectedVertexIndex = vertexIndex;
+                    m_isDraggingVertex = true;
+                    qDebug() << "Selected polygon vertex";
+                    break;
+                }
+                
+                int edgeIndex;
+                if (polygon->isNearEdge(m_lastPoint, edgeIndex)) {
+                    m_selectedPolygon = polygon.get();
+                    m_isDraggingPolygon = true;
+                    qDebug() << "Selected polygon edge";
                     break;
                 }
             }
             
-            // Check if we clicked on a line's endpoint
-            if (!m_selectedCircle) {
+            // Check for circle operations
+            if (!m_selectedPolygon) {
+                for (const auto& circle : m_circles) {
+                    if (circle->isNearCenter(m_lastPoint)) {
+                        m_selectedCircle = circle.get();
+                        m_isDraggingCenter = true;
+                        qDebug() << "Selected circle center";
+                        break;
+                    } else if (circle->isNearRadius(m_lastPoint)) {
+                        m_selectedCircle = circle.get();
+                        m_isDraggingRadius = true;
+                        qDebug() << "Selected circle radius";
+                        break;
+                    }
+                }
+            }
+            
+            // Check for line operations
+            if (!m_selectedPolygon && !m_selectedCircle) {
                 for (const auto& line : m_lines) {
                     bool isStart;
                     if (line->isNearEndpoint(m_lastPoint, isStart)) {
@@ -97,7 +163,7 @@ void Canvas::mousePressEvent(QMouseEvent *event)
         }
     } else if (event->button() == Qt::RightButton) {
         if (m_isDrawing) {
-            // Check if we right-clicked on a line to remove it
+            // Remove line
             for (const auto& line : m_lines) {
                 if (line->contains(event->pos())) {
                     removeLine(line.get());
@@ -106,7 +172,7 @@ void Canvas::mousePressEvent(QMouseEvent *event)
                 }
             }
         } else if (m_isCircleMode) {
-            // Check if we right-clicked on a circle to remove it
+            // Remove circle
             for (const auto& circle : m_circles) {
                 if (circle->contains(event->pos())) {
                     removeCircle(circle.get());
@@ -114,11 +180,26 @@ void Canvas::mousePressEvent(QMouseEvent *event)
                     break;
                 }
             }
+        } else if (m_isPolygonMode) {
+            // Remove polygon
+            for (const auto& polygon : m_polygons) {
+                if (polygon->contains(event->pos())) {
+                    removePolygon(polygon.get());
+                    qDebug() << "Polygon removed";
+                    break;
+                }
+            }
         } else if (m_isThicknessMode) {
-            // Check if we right-clicked on a line to decrease its thickness
+            // Decrease thickness
             for (const auto& line : m_lines) {
                 if (line->contains(event->pos())) {
                     handleThicknessChange(line.get(), false);
+                    break;
+                }
+            }
+            for (const auto& polygon : m_polygons) {
+                if (polygon->contains(event->pos())) {
+                    handlePolygonThicknessChange(polygon.get(), false);
                     break;
                 }
             }
@@ -140,6 +221,12 @@ void Canvas::mouseMoveEvent(QMouseEvent *event)
         int radius = static_cast<int>(std::sqrt(dx * dx + dy * dy));
         m_currentCircle->setRadius(radius);
         update();
+    } else if (m_isPolygonMode && m_currentPolygon) {
+        // Update the last vertex position during polygon creation
+        if (m_currentPolygon->getVertexCount() > 0) {
+            m_currentPolygon->setVertex(m_currentPolygon->getVertexCount() - 1, event->pos());
+            update();
+        }
     } else if (m_isDraggingCenter && m_selectedCircle) {
         // Move the circle's center
         QPoint offset = event->pos() - m_lastPoint;
@@ -157,6 +244,16 @@ void Canvas::mouseMoveEvent(QMouseEvent *event)
         } else {
             m_selectedLine->setEndPoint(event->pos());
         }
+        update();
+    } else if (m_isDraggingVertex && m_selectedPolygon) {
+        // Move the selected vertex
+        m_selectedPolygon->setVertex(m_selectedVertexIndex, event->pos());
+        update();
+    } else if (m_isDraggingPolygon && m_selectedPolygon) {
+        // Move the entire polygon
+        QPoint offset = event->pos() - m_lastPoint;
+        m_selectedPolygon->move(offset);
+        m_lastPoint = event->pos();
         update();
     }
 }
@@ -176,10 +273,15 @@ void Canvas::mouseReleaseEvent(QMouseEvent *event)
             qDebug() << "Circle completed and added to circles";
         }
         m_isDraggingEndpoint = false;
+        m_isDraggingStartPoint = false;
         m_isDraggingCenter = false;
         m_isDraggingRadius = false;
+        m_isDraggingVertex = false;
+        m_isDraggingPolygon = false;
         m_selectedLine = nullptr;
         m_selectedCircle = nullptr;
+        m_selectedPolygon = nullptr;
+        m_selectedVertexIndex = -1;
     }
 }
 
@@ -187,6 +289,7 @@ void Canvas::clearCanvas()
 {
     m_lines.clear();
     m_circles.clear();
+    m_polygons.clear();
     update();
 }
 
@@ -224,6 +327,23 @@ void Canvas::removeCircle(Circle* circle)
     }
 }
 
+void Canvas::addPolygon(std::unique_ptr<Polygon> polygon)
+{
+    m_polygons.push_back(std::move(polygon));
+    update();
+}
+
+void Canvas::removePolygon(Polygon* polygon)
+{
+    auto it = std::find_if(m_polygons.begin(), m_polygons.end(),
+        [polygon](const std::unique_ptr<Polygon>& p) { return p.get() == polygon; });
+    
+    if (it != m_polygons.end()) {
+        m_polygons.erase(it);
+        update();
+    }
+}
+
 void Canvas::handleThicknessChange(Line* line, bool increase)
 {
     if (!line) return;
@@ -234,6 +354,18 @@ void Canvas::handleThicknessChange(Line* line, bool increase)
     line->setThickness(newThickness);
     update();
     qDebug() << "Line thickness changed to:" << newThickness;
+}
+
+void Canvas::handlePolygonThicknessChange(Polygon* polygon, bool increase)
+{
+    if (!polygon) return;
+    
+    int currentThickness = polygon->getThickness();
+    int newThickness = increase ? currentThickness + 1 : std::max(1, currentThickness - 1);
+    
+    polygon->setThickness(newThickness);
+    update();
+    qDebug() << "Polygon thickness changed to:" << newThickness;
 }
 
 void Canvas::handleRadiusChange(Circle* circle, const QPoint& newPoint)
