@@ -30,6 +30,11 @@ public:
     void addPolygon(std::unique_ptr<Polygon> polygon);
     void removePolygon(Polygon* polygon);
 
+    // Getter methods for saving
+    const std::vector<std::unique_ptr<Line>>& getLines() const { return m_lines; }
+    const std::vector<std::unique_ptr<Circle>>& getCircles() const { return m_circles; }
+    const std::vector<std::unique_ptr<Polygon>>& getPolygons() const { return m_polygons; }
+
 protected:
     void paintEvent(QPaintEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
