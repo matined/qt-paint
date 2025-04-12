@@ -68,6 +68,8 @@ void MainWindow::onDrawLine()
 {
     qDebug() << "Line drawing mode activated";
     canvas->setDrawingMode(true);
+    canvas->setCircleMode(false);
+    canvas->setThicknessMode(false);
     statusLabel->setText("Mode: Line Drawing (Right-click to remove lines)");
 }
 
@@ -75,13 +77,17 @@ void MainWindow::onDrawCircle()
 {
     qDebug() << "Circle drawing mode activated";
     canvas->setDrawingMode(false);
-    statusLabel->setText("Mode: None");
+    canvas->setCircleMode(true);
+    canvas->setThicknessMode(false);
+    statusLabel->setText("Mode: Circle Drawing (Right-click to remove circles)");
 }
 
 void MainWindow::onDrawPolygon()
 {
     qDebug() << "Polygon drawing mode activated";
     canvas->setDrawingMode(false);
+    canvas->setCircleMode(false);
+    canvas->setThicknessMode(false);
     statusLabel->setText("Mode: None");
 }
 
@@ -89,6 +95,7 @@ void MainWindow::onResetMode()
 {
     qDebug() << "Mode reset";
     canvas->setDrawingMode(false);
+    canvas->setCircleMode(false);
     canvas->setThicknessMode(false);
     statusLabel->setText("Mode: None");
 }
@@ -106,6 +113,7 @@ void MainWindow::onThicken()
 {
     qDebug() << "Thickness mode activated";
     canvas->setDrawingMode(false);
+    canvas->setCircleMode(false);
     canvas->setThicknessMode(true);
     statusLabel->setText("Mode: Thickness (Left-click to increase, Right-click to decrease)");
 }

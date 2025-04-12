@@ -13,13 +13,15 @@ SOURCES += \
     mainwindow.cpp \
     line.cpp \
     canvas.cpp \
-    brush.cpp
+    brush.cpp \
+    circle.cpp
 
 HEADERS += \
     mainwindow.h \
     line.h \
     canvas.h \
-    brush.h
+    brush.h \
+    circle.h
 
 FORMS += \
     mainwindow.ui
