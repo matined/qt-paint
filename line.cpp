@@ -18,8 +18,12 @@ void Line::setThickness(int thickness)
 
 void Line::draw(QPainter& painter)
 {
-    painter.setPen(QPen(m_color, 1)); // Use 1-pixel pen for brush drawing
-    drawDDA(painter);
+    if (m_brush.isAntiAliasing()) {
+        drawWuLine(painter);
+    } else {
+        painter.setPen(QPen(m_color, 1)); // Use 1-pixel pen for brush drawing
+        drawDDA(painter);
+    }
     drawEndpoints(painter);
 }
 
@@ -67,6 +71,59 @@ void Line::drawWithBrush(QPainter& painter, int x, int y)
                 painter.drawPoint(x + dx - halfSize, y + dy - halfSize);
             }
         }
+    }
+}
+
+void Line::drawWuLine(QPainter& painter)
+{
+    int x1 = m_start.x();
+    int y1 = m_start.y();
+    int x2 = m_end.x();
+    int y2 = m_end.y();
+
+    // Ensure we're always drawing from left to right
+    if (x1 > x2) {
+        std::swap(x1, x2);
+        std::swap(y1, y2);
+    }
+
+    int dx = x2 - x1;
+    int dy = y2 - y1;
+
+    if (dx == 0) {
+        // Vertical line
+        int y = std::min(y1, y2);
+        int yEnd = std::max(y1, y2);
+        while (y <= yEnd) {
+            painter.setPen(QPen(m_color, 1));
+            painter.drawPoint(x1, y);
+            y++;
+        }
+        return;
+    }
+
+    float gradient = static_cast<float>(dy) / dx;
+    float y = y1;
+
+    // Main loop
+    for (int x = x1; x <= x2; x++) {
+        // Calculate the two y values
+        int yFloor = static_cast<int>(y);
+        int yCeil = yFloor + 1;
+        float intensity = y - yFloor;
+
+        // Draw the two pixels
+        QColor color1 = m_color;
+        QColor color2 = m_color;
+        color1.setAlphaF(1.0f - intensity);
+        color2.setAlphaF(intensity);
+
+        painter.setPen(QPen(color1, 1));
+        painter.drawPoint(x, yFloor);
+        painter.setPen(QPen(color2, 1));
+        painter.drawPoint(x, yCeil);
+
+        y += gradient;
     }
 }
 

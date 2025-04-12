@@ -22,6 +22,7 @@ public:
     void setCircleMode(bool enabled) { m_isCircleMode = enabled; }
     void setPolygonMode(bool enabled) { m_isPolygonMode = enabled; }
     void setColorMode(bool enabled) { m_isColorMode = enabled; }
+    void setAntiAliasing(bool enabled);
     void clearCanvas();
     void addLine(std::unique_ptr<Line> line);
     void removeLine(Line* line);
@@ -47,6 +48,7 @@ private:
     bool m_isCircleMode = false;
     bool m_isPolygonMode = false;
     bool m_isColorMode = false;
+    bool m_antiAliasing = false;
     Line* m_currentLine = nullptr;
     Circle* m_currentCircle = nullptr;
     Polygon* m_currentPolygon = nullptr;
@@ -68,6 +70,7 @@ private:
     void handleThicknessChange(Line* line, bool increase);
     void handleRadiusChange(Circle* circle, const QPoint& newPoint);
     void handlePolygonThicknessChange(Polygon* polygon, bool increase);
+    void updateAllObjectsAntiAliasing();
 };
 
 #endif // CANVAS_H

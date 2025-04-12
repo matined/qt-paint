@@ -24,11 +24,15 @@ public:
     
     void setThickness(int thickness);
     int getThickness() const { return m_thickness; }
+
+    void setAntiAliasing(bool enabled) { m_brush.setAntiAliasing(enabled); }
+    bool isAntiAliasing() const { return m_brush.isAntiAliasing(); }
     
 private:
     void drawDDA(QPainter& painter);
     void drawEndpoints(QPainter& painter);
     void drawWithBrush(QPainter& painter, int x, int y);
+    void drawWuLine(QPainter& painter);
     
     QPoint m_start;
     QPoint m_end;

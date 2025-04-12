@@ -11,8 +11,12 @@ Circle::Circle(const QPoint& center, int radius)
 
 void Circle::draw(QPainter& painter)
 {
-    painter.setPen(QPen(m_color, 1));
-    drawMidpointCircle(painter);
+    if (m_antiAliasing) {
+        drawWuCircle(painter);
+    } else {
+        painter.setPen(QPen(m_color, 1));
+        drawMidpointCircle(painter);
+    }
     drawCenter(painter);
     drawRadiusPoint(painter);
 }
@@ -58,6 +62,45 @@ void Circle::drawMidpointCircle(QPainter& painter)
         painter.drawPoint(m_center.x() + y, m_center.y() - x);
         painter.drawPoint(m_center.x() - y, m_center.y() - x);
     }
+}
+
+void Circle::drawWuCircle(QPainter& painter)
+{
+    int x = m_radius;
+    int y = 0;
+    
+    // Draw the initial points
+    plotPoints(painter, x, y, 1.0f);
+    
+    while (x > y) {
+        y++;
+        x = static_cast<int>(std::ceil(std::sqrt(m_radius * m_radius - y * y)));
+        
+        // Calculate intensity
+        float T = std::sqrt(m_radius * m_radius - y * y) - (x - 1);
+        
+        // Draw the points with anti-aliasing
+        plotPoints(painter, x, y, 1.0f - T);
+        plotPoints(painter, x - 1, y, T);
+    }
+}
+
+void Circle::plotPoints(QPainter& painter, int x, int y, float intensity)
+{
+    // Create color with alpha based on intensity
+    QColor color = m_color;
+    color.setAlphaF(intensity);
+    painter.setPen(QPen(color, 1));
+    
+    // Plot all eight octants
+    painter.drawPoint(m_center.x() + x, m_center.y() + y);
+    painter.drawPoint(m_center.x() - x, m_center.y() + y);
+    painter.drawPoint(m_center.x() + x, m_center.y() - y);
+    painter.drawPoint(m_center.x() - x, m_center.y() - y);
+    painter.drawPoint(m_center.x() + y, m_center.y() + x);
+    painter.drawPoint(m_center.x() - y, m_center.y() + x);
+    painter.drawPoint(m_center.x() + y, m_center.y() - x);
+    painter.drawPoint(m_center.x() - y, m_center.y() - x);
 }
 
 void Circle::drawCenter(QPainter& painter)

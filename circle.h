@@ -21,15 +21,21 @@ public:
     
     void setColor(const QColor& color) { m_color = color; }
     QColor getColor() const { return m_color; }
+
+    void setAntiAliasing(bool enabled) { m_antiAliasing = enabled; }
+    bool isAntiAliasing() const { return m_antiAliasing; }
     
 private:
     void drawMidpointCircle(QPainter& painter);
+    void drawWuCircle(QPainter& painter);
     void drawCenter(QPainter& painter);
     void drawRadiusPoint(QPainter& painter);
+    void plotPoints(QPainter& painter, int x, int y, float intensity);
     
     QPoint m_center;
     int m_radius;
     QColor m_color = Qt::black;
+    bool m_antiAliasing = false;
     static const int CENTER_SIZE = 8; // Size of the center point square
     static const int RADIUS_POINT_SIZE = 6; // Size of the radius point square
 };

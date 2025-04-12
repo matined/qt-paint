@@ -56,3 +56,28 @@ bool Brush::isInPattern(int x, int y) const
     
     return m_pattern[y][x];
 }
+
+float Brush::getIntensity(int x, int y) const
+{
+    if (!m_antiAliasing) {
+        return isInPattern(x, y) ? 1.0f : 0.0f;
+    }
+
+    // Check bounds
+    if (x < 0 || x >= m_size || y < 0 || y >= m_size) {
+        return 0.0f;
+    }
+
+    float center = (m_size - 1) / 2.0f;
+    float radius = center;
+    
+    // Calculate distance from center
+    float dx = x - center;
+    float dy = y - center;
+    float distance = std::sqrt(dx * dx + dy * dy);
+    
+    // Calculate intensity based on distance from the edge
+    float intensity = 1.0f - std::min(1.0f, std::max(0.0f, (distance - (radius - 1.0f))));
+    
+    return intensity;
+}

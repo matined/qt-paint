@@ -129,7 +129,10 @@ void MainWindow::onThicken()
 
 void MainWindow::onToggleAntiAliasing()
 {
-    // To be implemented
+    static bool antiAliasingEnabled = false;
+    antiAliasingEnabled = !antiAliasingEnabled;
+    canvas->setAntiAliasing(antiAliasingEnabled);
+    statusLabel->setText(QString("Anti-aliasing: %1").arg(antiAliasingEnabled ? "Enabled" : "Disabled"));
 }
 
 // File operation slots

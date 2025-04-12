@@ -416,3 +416,37 @@ void Canvas::handleRadiusChange(Circle* circle, const QPoint& newPoint)
     circle->setRadius(newRadius);
     qDebug() << "Circle radius changed to:" << newRadius;
 }
+
+void Canvas::setAntiAliasing(bool enabled)
+{
+    m_antiAliasing = enabled;
+    updateAllObjectsAntiAliasing();
+    update();
+}
+
+void Canvas::updateAllObjectsAntiAliasing()
+{
+    // Update lines
+    for (const auto& line : m_lines) {
+        line->setAntiAliasing(m_antiAliasing);
+    }
+    if (m_currentLine) {
+        m_currentLine->setAntiAliasing(m_antiAliasing);
+    }
+
+    // Update circles
+    for (const auto& circle : m_circles) {
+        circle->setAntiAliasing(m_antiAliasing);
+    }
+    if (m_currentCircle) {
+        m_currentCircle->setAntiAliasing(m_antiAliasing);
+    }
+
+    // Update polygons
+    for (const auto& polygon : m_polygons) {
+        polygon->setAntiAliasing(m_antiAliasing);
+    }
+    if (m_currentPolygon) {
+        m_currentPolygon->setAntiAliasing(m_antiAliasing);
+    }
+}

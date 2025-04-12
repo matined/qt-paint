@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <cmath>
+#include <QColor>
 
 class Brush {
 public:
@@ -17,11 +18,17 @@ public:
     // Check if a point is within the brush pattern
     bool isInPattern(int x, int y) const;
 
+    // Anti-aliasing support
+    void setAntiAliasing(bool enabled) { m_antiAliasing = enabled; }
+    bool isAntiAliasing() const { return m_antiAliasing; }
+    float getIntensity(int x, int y) const;
+
 private:
     void generateCircularPattern();
     
     int m_size;
     std::vector<std::vector<bool>> m_pattern;
+    bool m_antiAliasing = false;
 };
 
 #endif // BRUSH_H

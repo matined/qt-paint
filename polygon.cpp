@@ -32,28 +32,85 @@ void Polygon::drawEdges(QPainter& painter)
         
         if (!m_isClosed && i == m_vertices.size() - 1) break;
         
-        // Use DDA algorithm for line drawing
-        int x1 = start.x();
-        int y1 = start.y();
-        int x2 = end.x();
-        int y2 = end.y();
-        
-        int dx = x2 - x1;
-        int dy = y2 - y1;
-        
-        int steps = std::max(abs(dx), abs(dy));
-        
-        float xIncrement = dx / (float)steps;
-        float yIncrement = dy / (float)steps;
-        
-        float x = x1;
-        float y = y1;
-        
-        for (int j = 0; j <= steps; j++) {
-            drawWithBrush(painter, round(x), round(y));
-            x += xIncrement;
-            y += yIncrement;
+        if (m_brush.isAntiAliasing()) {
+            drawWuLine(painter, start, end);
+        } else {
+            // Use DDA algorithm for line drawing
+            int x1 = start.x();
+            int y1 = start.y();
+            int x2 = end.x();
+            int y2 = end.y();
+            
+            int dx = x2 - x1;
+            int dy = y2 - y1;
+            
+            int steps = std::max(abs(dx), abs(dy));
+            
+            float xIncrement = dx / (float)steps;
+            float yIncrement = dy / (float)steps;
+            
+            float x = x1;
+            float y = y1;
+            
+            for (int j = 0; j <= steps; j++) {
+                drawWithBrush(painter, round(x), round(y));
+                x += xIncrement;
+                y += yIncrement;
+            }
         }
+    }
+}
+
+void Polygon::drawWuLine(QPainter& painter, const QPoint& start, const QPoint& end)
+{
+    int x1 = start.x();
+    int y1 = start.y();
+    int x2 = end.x();
+    int y2 = end.y();
+
+    // Ensure we're always drawing from left to right
+    if (x1 > x2) {
+        std::swap(x1, x2);
+        std::swap(y1, y2);
+    }
+
+    int dx = x2 - x1;
+    int dy = y2 - y1;
+
+    if (dx == 0) {
+        // Vertical line
+        int y = std::min(y1, y2);
+        int yEnd = std::max(y1, y2);
+        while (y <= yEnd) {
+            painter.setPen(QPen(m_color, 1));
+            painter.drawPoint(x1, y);
+            y++;
+        }
+        return;
+    }
+
+    float gradient = static_cast<float>(dy) / dx;
+    float y = y1;
+
+    // Main loop
+    for (int x = x1; x <= x2; x++) {
+        // Calculate the two y values
+        int yFloor = static_cast<int>(y);
+        int yCeil = yFloor + 1;
+        float intensity = y - yFloor;
+
+        // Draw the two pixels
+        QColor color1 = m_color;
+        QColor color2 = m_color;
+        color1.setAlphaF(1.0f - intensity);
+        color2.setAlphaF(intensity);
+
+        painter.setPen(QPen(color1, 1));
+        painter.drawPoint(x, yFloor);
+        painter.setPen(QPen(color2, 1));
+        painter.drawPoint(x, yCeil);
+
+        y += gradient;
     }
 }
 
