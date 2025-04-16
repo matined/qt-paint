@@ -74,6 +74,7 @@ void MainWindow::onDrawLine()
     canvas->setCircleMode(false);
     canvas->setPolygonMode(false);
     canvas->setThicknessMode(false);
+    canvas->setColorMode(false);
     statusLabel->setText("Mode: Line Drawing (Right-click to remove lines)");
 }
 
@@ -84,6 +85,7 @@ void MainWindow::onDrawCircle()
     canvas->setCircleMode(true);
     canvas->setPolygonMode(false);
     canvas->setThicknessMode(false);
+    canvas->setColorMode(false);
     statusLabel->setText("Mode: Circle Drawing (Right-click to remove circles)");
 }
 
@@ -94,6 +96,7 @@ void MainWindow::onDrawPolygon()
     canvas->setCircleMode(false);
     canvas->setPolygonMode(true);
     canvas->setThicknessMode(false);
+    canvas->setColorMode(false);
     statusLabel->setText("Mode: Polygon Drawing (Click to add vertices, click near first vertex to close, Right-click to remove)");
 }
 
@@ -104,17 +107,15 @@ void MainWindow::onResetMode()
     canvas->setCircleMode(false);
     canvas->setPolygonMode(false);
     canvas->setThicknessMode(false);
+    canvas->setColorMode(false);
     statusLabel->setText("Mode: None");
 }
 
 // Style slots
 void MainWindow::onChangeColor()
 {
-    QColor color = QColorDialog::getColor(Qt::black, this, "Select Color");
-    if (color.isValid()) {
-        canvas->setColorMode(true);
-        statusLabel->setText("Mode: Color Change (Click on an object to change its color)");
-    }
+    canvas->setColorMode(true);
+    statusLabel->setText("Mode: Color Change (Click on an object to change its color)");
 }
 
 void MainWindow::onThicken()
@@ -124,6 +125,7 @@ void MainWindow::onThicken()
     canvas->setCircleMode(false);
     canvas->setPolygonMode(false);
     canvas->setThicknessMode(true);
+    canvas->setColorMode(false);
     statusLabel->setText("Mode: Thickness (Left-click to increase, Right-click to decrease)");
 }
 
