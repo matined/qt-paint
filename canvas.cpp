@@ -38,6 +38,11 @@ void Canvas::paintEvent(QPaintEvent *event)
         polygon->draw(painter);
     }
     
+    // Draw all pacmans
+    for (const auto& pacman : m_pacmans) {
+        pacman->draw(painter);
+    }
+    
     // Draw current line if exists
     if (m_currentLine) {
         m_currentLine->draw(painter);
@@ -51,6 +56,11 @@ void Canvas::paintEvent(QPaintEvent *event)
     // Draw current polygon if exists
     if (m_currentPolygon) {
         m_currentPolygon->draw(painter);
+    }
+    
+    // Draw current pacman if exists
+    if (m_currentPacman) {
+        m_currentPacman->draw(painter);
     }
 }
 
@@ -132,6 +142,27 @@ void Canvas::mousePressEvent(QMouseEvent *event)
                 qDebug() << "Added vertex to polygon";
             }
             update(); // Force update to show the current polygon
+        } else if (m_isPacmanMode) {
+            // Handle Pacman creation with 3 clicks
+            if (m_pacmanClickState == 0) {
+                // First click - create pacman with center at click position
+                m_currentPacman = new Pacman(event->pos());
+                m_pacmanClickState = 1;
+                qDebug() << "Started new pacman at center:" << event->pos();
+            } else if (m_pacmanClickState == 1) {
+                // Second click - set radius and first vertex
+                m_currentPacman->setRadiusPoint(event->pos());
+                m_pacmanClickState = 2;
+                qDebug() << "Set pacman radius point";
+                update();
+            } else if (m_pacmanClickState == 2) {
+                // Third click - set mouth end point
+                m_currentPacman->setMouthPoint(event->pos());
+                addPacman(std::unique_ptr<Pacman>(m_currentPacman));
+                m_currentPacman = nullptr;
+                m_pacmanClickState = 0;
+                qDebug() << "Pacman completed";
+            }
         } else if (m_isThicknessMode) {
             // Check if we clicked on a line or polygon to change thickness
             for (const auto& line : m_lines) {
@@ -232,6 +263,20 @@ void Canvas::mousePressEvent(QMouseEvent *event)
                 if (polygon->contains(event->pos())) {
                     removePolygon(polygon.get());
                     qDebug() << "Polygon removed";
+                    break;
+                }
+            }
+        } else if (m_isPacmanMode) {
+            // Remove pacman
+            for (const auto& pacman : m_pacmans) {
+                // Simple check if click is within the radius of the pacman
+                QPoint center = pacman->getCenter();
+                int radius = pacman->getRadius();
+                int dx = event->pos().x() - center.x();
+                int dy = event->pos().y() - center.y();
+                if (dx*dx + dy*dy <= radius*radius) {
+                    removePacman(pacman.get());
+                    qDebug() << "Pacman removed";
                     break;
                 }
             }
@@ -344,6 +389,7 @@ void Canvas::clearCanvas()
     m_lines.clear();
     m_circles.clear();
     m_polygons.clear();
+    m_pacmans.clear();
     update();
 }
 
@@ -465,5 +511,30 @@ void Canvas::updateAllObjectsAntiAliasing()
     }
     if (m_currentPolygon) {
         m_currentPolygon->setAntiAliasing(m_antiAliasing);
+    }
+    
+    // Update pacmans
+    for (const auto& pacman : m_pacmans) {
+        pacman->setAntiAliasing(m_antiAliasing);
+    }
+    if (m_currentPacman) {
+        m_currentPacman->setAntiAliasing(m_antiAliasing);
+    }
+}
+
+void Canvas::addPacman(std::unique_ptr<Pacman> pacman)
+{
+    m_pacmans.push_back(std::move(pacman));
+    update();
+}
+
+void Canvas::removePacman(Pacman* pacman)
+{
+    auto it = std::find_if(m_pacmans.begin(), m_pacmans.end(),
+        [pacman](const std::unique_ptr<Pacman>& p) { return p.get() == pacman; });
+    
+    if (it != m_pacmans.end()) {
+        m_pacmans.erase(it);
+        update();
     }
 }

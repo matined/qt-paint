@@ -30,6 +30,7 @@ MainWindow::MainWindow(QWidget *parent)
     btnDrawLine = ui->btnDrawLine;
     btnDrawCircle = ui->btnDrawCircle;
     btnDrawPolygon = ui->btnDrawPolygon;
+    btnDrawPacman = ui->btnDrawPacman;
     btnResetMode = ui->btnResetMode;
     
     // Get the style buttons
@@ -46,6 +47,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(btnDrawLine, &QPushButton::clicked, this, &MainWindow::onDrawLine);
     connect(btnDrawCircle, &QPushButton::clicked, this, &MainWindow::onDrawCircle);
     connect(btnDrawPolygon, &QPushButton::clicked, this, &MainWindow::onDrawPolygon);
+    connect(btnDrawPacman, &QPushButton::clicked, this, &MainWindow::onDrawPacman);
     connect(btnResetMode, &QPushButton::clicked, this, &MainWindow::onResetMode);
     
     // Connect style signals to slots
@@ -73,6 +75,7 @@ void MainWindow::onDrawLine()
     canvas->setDrawingMode(true);
     canvas->setCircleMode(false);
     canvas->setPolygonMode(false);
+    canvas->setPacmanMode(false);
     canvas->setThicknessMode(false);
     canvas->setColorMode(false);
     statusLabel->setText("Mode: Line Drawing (Right-click to remove lines)");
@@ -84,6 +87,7 @@ void MainWindow::onDrawCircle()
     canvas->setDrawingMode(false);
     canvas->setCircleMode(true);
     canvas->setPolygonMode(false);
+    canvas->setPacmanMode(false);
     canvas->setThicknessMode(false);
     canvas->setColorMode(false);
     statusLabel->setText("Mode: Circle Drawing (Right-click to remove circles)");
@@ -95,9 +99,22 @@ void MainWindow::onDrawPolygon()
     canvas->setDrawingMode(false);
     canvas->setCircleMode(false);
     canvas->setPolygonMode(true);
+    canvas->setPacmanMode(false);
     canvas->setThicknessMode(false);
     canvas->setColorMode(false);
     statusLabel->setText("Mode: Polygon Drawing (Click to add vertices, click near first vertex to close, Right-click to remove)");
+}
+
+void MainWindow::onDrawPacman()
+{
+    qDebug() << "Pacman drawing mode activated";
+    canvas->setDrawingMode(false);
+    canvas->setCircleMode(false);
+    canvas->setPolygonMode(false);
+    canvas->setPacmanMode(true);
+    canvas->setThicknessMode(false);
+    canvas->setColorMode(false);
+    statusLabel->setText("Mode: Pacman Drawing (3 clicks: center, radius point, mouth end point. Right-click to remove)");
 }
 
 void MainWindow::onResetMode()
@@ -106,6 +123,7 @@ void MainWindow::onResetMode()
     canvas->setDrawingMode(false);
     canvas->setCircleMode(false);
     canvas->setPolygonMode(false);
+    canvas->setPacmanMode(false);
     canvas->setThicknessMode(false);
     canvas->setColorMode(false);
     statusLabel->setText("Mode: None");
@@ -124,6 +142,7 @@ void MainWindow::onThicken()
     canvas->setDrawingMode(false);
     canvas->setCircleMode(false);
     canvas->setPolygonMode(false);
+    canvas->setPacmanMode(false);
     canvas->setThicknessMode(true);
     canvas->setColorMode(false);
     statusLabel->setText("Mode: Thickness (Left-click to increase, Right-click to decrease)");
@@ -181,6 +200,16 @@ void MainWindow::onSave()
         out << polygon->getColor().name() << " "
             << polygon->getThickness() << " "
             << (polygon->isClosed() ? "1" : "0") << "\n";
+    }
+    
+    // Save pacmans
+    for (const auto& pacman : canvas->getPacmans()) {
+        out << "PACMAN "
+            << pacman->getCenter().x() << " "
+            << pacman->getCenter().y() << " "
+            << pacman->getRadius() << " "
+            << pacman->getStartAngle() << " "
+            << pacman->getEndAngle() << "\n";
     }
 
     file.close();
@@ -251,6 +280,29 @@ void MainWindow::onLoad()
             }
             
             canvas->addPolygon(std::move(newPolygon));
+        }
+        else if (parts[0] == "PACMAN" && parts.size() >= 6) {
+            QPoint center(parts[1].toInt(), parts[2].toInt());
+            int radius = parts[3].toInt();
+            float startAngle = parts[4].toFloat();
+            float endAngle = parts[5].toFloat();
+            
+            auto newPacman = std::make_unique<Pacman>(center);
+            // Create a radius point based on the radius and startAngle
+            QPoint radiusPoint(
+                center.x() + static_cast<int>(radius * std::cos(startAngle)),
+                center.y() + static_cast<int>(radius * std::sin(startAngle))
+            );
+            newPacman->setRadiusPoint(radiusPoint);
+            
+            // Create a mouth point based on the endAngle
+            QPoint mouthPoint(
+                center.x() + static_cast<int>(radius * std::cos(endAngle)),
+                center.y() + static_cast<int>(radius * std::sin(endAngle))
+            );
+            newPacman->setMouthPoint(mouthPoint);
+            
+            canvas->addPacman(std::move(newPacman));
         }
     }
 

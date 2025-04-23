@@ -8,6 +8,7 @@
 #include "line.h"
 #include "circle.h"
 #include "polygon.h"
+#include "pacman.h"
 
 class Canvas : public QWidget
 {
@@ -21,6 +22,7 @@ public:
     void setThicknessMode(bool enabled) { m_isThicknessMode = enabled; }
     void setCircleMode(bool enabled) { m_isCircleMode = enabled; }
     void setPolygonMode(bool enabled) { m_isPolygonMode = enabled; }
+    void setPacmanMode(bool enabled) { m_isPacmanMode = enabled; }
     void setColorMode(bool enabled) { m_isColorMode = enabled; }
     void setAntiAliasing(bool enabled);
     void clearCanvas();
@@ -30,11 +32,14 @@ public:
     void removeCircle(Circle* circle);
     void addPolygon(std::unique_ptr<Polygon> polygon);
     void removePolygon(Polygon* polygon);
+    void addPacman(std::unique_ptr<Pacman> pacman);
+    void removePacman(Pacman* pacman);
 
     // Getter methods for saving
     const std::vector<std::unique_ptr<Line>>& getLines() const { return m_lines; }
     const std::vector<std::unique_ptr<Circle>>& getCircles() const { return m_circles; }
     const std::vector<std::unique_ptr<Polygon>>& getPolygons() const { return m_polygons; }
+    const std::vector<std::unique_ptr<Pacman>>& getPacmans() const { return m_pacmans; }
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -47,14 +52,17 @@ private:
     bool m_isThicknessMode = false;
     bool m_isCircleMode = false;
     bool m_isPolygonMode = false;
+    bool m_isPacmanMode = false;
     bool m_isColorMode = false;
     bool m_antiAliasing = false;
     Line* m_currentLine = nullptr;
     Circle* m_currentCircle = nullptr;
     Polygon* m_currentPolygon = nullptr;
+    Pacman* m_currentPacman = nullptr;
     std::vector<std::unique_ptr<Line>> m_lines;
     std::vector<std::unique_ptr<Circle>> m_circles;
     std::vector<std::unique_ptr<Polygon>> m_polygons;
+    std::vector<std::unique_ptr<Pacman>> m_pacmans;
     QPoint m_lastPoint;
     bool m_isDraggingEndpoint = false;
     bool m_isDraggingStartPoint = false;
@@ -68,6 +76,7 @@ private:
     Polygon* m_selectedPolygon = nullptr;
     int m_selectedVertexIndex = -1;
     int m_selectedEdgeIndex = -1;
+    int m_pacmanClickState = 0;
     
     void handleThicknessChange(Line* line, bool increase);
     void handleRadiusChange(Circle* circle, const QPoint& newPoint);

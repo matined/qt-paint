@@ -40,6 +40,13 @@
         </widget>
        </item>
        <item>
+        <widget class="QPushButton" name="btnDrawPacman">
+         <property name="text">
+          <string>Draw Pacman</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <spacer name="horizontalSpacer">
          <property name="orientation">
           <enum>Qt::Orientation::Horizontal</enum>
