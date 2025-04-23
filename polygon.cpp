@@ -68,17 +68,12 @@ void Polygon::drawWuLine(QPainter& painter, const QPoint& start, const QPoint& e
     int x2 = end.x();
     int y2 = end.y();
 
-    // Ensure we're always drawing from left to right
-    if (x1 > x2) {
-        std::swap(x1, x2);
-        std::swap(y1, y2);
-    }
-
+    // Calculate differences
     int dx = x2 - x1;
     int dy = y2 - y1;
 
+    // Handle vertical lines
     if (dx == 0) {
-        // Vertical line
         int y = std::min(y1, y2);
         int yEnd = std::max(y1, y2);
         while (y <= yEnd) {
@@ -87,6 +82,36 @@ void Polygon::drawWuLine(QPainter& painter, const QPoint& start, const QPoint& e
             y++;
         }
         return;
+    }
+
+    // Handle horizontal lines
+    if (dy == 0) {
+        int x = std::min(x1, x2);
+        int xEnd = std::max(x1, x2);
+        while (x <= xEnd) {
+            painter.setPen(QPen(m_color, 1));
+            painter.drawPoint(x, y1);
+            x++;
+        }
+        return;
+    }
+
+    // Determine if the line is steep
+    bool steep = std::abs(dy) > std::abs(dx);
+    
+    // If steep, swap x and y coordinates
+    if (steep) {
+        std::swap(x1, y1);
+        std::swap(x2, y2);
+        std::swap(dx, dy);
+    }
+
+    // Ensure we're always drawing from left to right
+    if (x1 > x2) {
+        std::swap(x1, x2);
+        std::swap(y1, y2);
+        dx = -dx;
+        dy = -dy;
     }
 
     float gradient = static_cast<float>(dy) / dx;
@@ -105,10 +130,18 @@ void Polygon::drawWuLine(QPainter& painter, const QPoint& start, const QPoint& e
         color1.setAlphaF(1.0f - intensity);
         color2.setAlphaF(intensity);
 
-        painter.setPen(QPen(color1, 1));
-        painter.drawPoint(x, yFloor);
-        painter.setPen(QPen(color2, 1));
-        painter.drawPoint(x, yCeil);
+        if (steep) {
+            // For steep lines, swap back x and y coordinates when drawing
+            painter.setPen(QPen(color1, 1));
+            painter.drawPoint(yFloor, x);
+            painter.setPen(QPen(color2, 1));
+            painter.drawPoint(yCeil, x);
+        } else {
+            painter.setPen(QPen(color1, 1));
+            painter.drawPoint(x, yFloor);
+            painter.setPen(QPen(color2, 1));
+            painter.drawPoint(x, yCeil);
+        }
 
         y += gradient;
     }
