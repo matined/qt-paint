@@ -44,7 +44,8 @@ void Pacman::setMouthPoint(const QPoint& point)
 
 void Pacman::draw(QPainter& painter)
 {
-    if (m_radius <= 0) return;
+    // Only draw the pacman when it's complete (all 3 clicks done)
+    if (m_radius <= 0 || !m_isComplete) return;
     
     painter.setPen(QPen(m_color, 1));
     painter.setBrush(m_color);
@@ -104,15 +105,13 @@ void Pacman::drawMidpointCircle(QPainter& painter)
     }
     
     // Draw lines from center to mouth edges
-    if (m_isComplete) {
-        int x1 = m_center.x() + static_cast<int>(m_radius * std::cos(m_startAngle));
-        int y1 = m_center.y() + static_cast<int>(m_radius * std::sin(m_startAngle));
-        int x2 = m_center.x() + static_cast<int>(m_radius * std::cos(m_endAngle));
-        int y2 = m_center.y() + static_cast<int>(m_radius * std::sin(m_endAngle));
-        
-        painter.drawLine(m_center, QPoint(x1, y1));
-        painter.drawLine(m_center, QPoint(x2, y2));
-    }
+    int x1 = m_center.x() + static_cast<int>(m_radius * std::cos(m_startAngle));
+    int y1 = m_center.y() + static_cast<int>(m_radius * std::sin(m_startAngle));
+    int x2 = m_center.x() + static_cast<int>(m_radius * std::cos(m_endAngle));
+    int y2 = m_center.y() + static_cast<int>(m_radius * std::sin(m_endAngle));
+    
+    painter.drawLine(m_center, QPoint(x1, y1));
+    painter.drawLine(m_center, QPoint(x2, y2));
 }
 
 void Pacman::drawWuCircle(QPainter& painter)
