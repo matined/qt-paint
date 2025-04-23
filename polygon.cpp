@@ -273,4 +273,31 @@ void Polygon::move(const QPoint& offset)
     for (auto& vertex : m_vertices) {
         vertex += offset;
     }
+}
+
+std::pair<QPoint, QPoint> Polygon::getEdgePoints(int edgeIndex) const
+{
+    if (edgeIndex < 0 || edgeIndex >= static_cast<int>(m_vertices.size())) {
+        return std::make_pair(QPoint(), QPoint());
+    }
+
+    const QPoint& start = m_vertices[edgeIndex];
+    const QPoint& end = m_vertices[(edgeIndex + 1) % m_vertices.size()];
+    return std::make_pair(start, end);
+}
+
+void Polygon::moveEdge(int edgeIndex, const QPoint& offset)
+{
+    if (edgeIndex < 0 || edgeIndex >= static_cast<int>(m_vertices.size())) {
+        return;
+    }
+
+    // Move both vertices of the edge
+    m_vertices[edgeIndex] += offset;
+    int nextIndex = (edgeIndex + 1) % m_vertices.size();
+    
+    // Only move the second vertex if we're not at the last edge of an unclosed polygon
+    if (m_isClosed || edgeIndex < static_cast<int>(m_vertices.size()) - 1) {
+        m_vertices[nextIndex] += offset;
+    }
 } 

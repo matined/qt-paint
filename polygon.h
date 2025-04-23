@@ -32,6 +32,10 @@ public:
     void setAntiAliasing(bool enabled) { m_brush.setAntiAliasing(enabled); }
     bool isAntiAliasing() const { return m_brush.isAntiAliasing(); }
 
+    // New methods for edge manipulation
+    std::pair<QPoint, QPoint> getEdgePoints(int edgeIndex) const;
+    void moveEdge(int edgeIndex, const QPoint& offset);
+
 private:
     void drawEdges(QPainter& painter);
     void drawVertices(QPainter& painter);

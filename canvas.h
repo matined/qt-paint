@@ -61,11 +61,13 @@ private:
     bool m_isDraggingCenter = false;
     bool m_isDraggingRadius = false;
     bool m_isDraggingVertex = false;
+    bool m_isDraggingEdge = false;
     bool m_isDraggingPolygon = false;
     Line* m_selectedLine = nullptr;
     Circle* m_selectedCircle = nullptr;
     Polygon* m_selectedPolygon = nullptr;
     int m_selectedVertexIndex = -1;
+    int m_selectedEdgeIndex = -1;
     
     void handleThicknessChange(Line* line, bool increase);
     void handleRadiusChange(Circle* circle, const QPoint& newPoint);

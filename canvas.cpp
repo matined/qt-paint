@@ -155,15 +155,24 @@ void Canvas::mousePressEvent(QMouseEvent *event)
                     m_selectedVertexIndex = vertexIndex;
                     m_isDraggingVertex = true;
                     qDebug() << "Selected polygon vertex";
-                    break;
+                    return;
                 }
                 
                 int edgeIndex;
                 if (polygon->isNearEdge(m_lastPoint, edgeIndex)) {
                     m_selectedPolygon = polygon.get();
-                    m_isDraggingPolygon = true;
+                    m_selectedEdgeIndex = edgeIndex;
+                    m_isDraggingEdge = true;
                     qDebug() << "Selected polygon edge";
-                    break;
+                    return;
+                }
+
+                // Check for polygon interior (for whole polygon dragging)
+                if (polygon->contains(m_lastPoint)) {
+                    m_selectedPolygon = polygon.get();
+                    m_isDraggingPolygon = true;
+                    qDebug() << "Selected polygon for dragging";
+                    return;
                 }
             }
             
@@ -286,6 +295,12 @@ void Canvas::mouseMoveEvent(QMouseEvent *event)
         // Move the selected vertex
         m_selectedPolygon->setVertex(m_selectedVertexIndex, event->pos());
         update();
+    } else if (m_isDraggingEdge && m_selectedPolygon) {
+        // Move the selected edge
+        QPoint offset = event->pos() - m_lastPoint;
+        m_selectedPolygon->moveEdge(m_selectedEdgeIndex, offset);
+        m_lastPoint = event->pos();
+        update();
     } else if (m_isDraggingPolygon && m_selectedPolygon) {
         // Move the entire polygon
         QPoint offset = event->pos() - m_lastPoint;
@@ -314,11 +329,13 @@ void Canvas::mouseReleaseEvent(QMouseEvent *event)
         m_isDraggingCenter = false;
         m_isDraggingRadius = false;
         m_isDraggingVertex = false;
+        m_isDraggingEdge = false;
         m_isDraggingPolygon = false;
         m_selectedLine = nullptr;
         m_selectedCircle = nullptr;
         m_selectedPolygon = nullptr;
         m_selectedVertexIndex = -1;
+        m_selectedEdgeIndex = -1;
     }
 }
 
