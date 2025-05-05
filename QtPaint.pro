@@ -15,7 +15,8 @@ SOURCES += \
     canvas.cpp \
     brush.cpp \
     circle.cpp \
-    polygon.cpp
+    polygon.cpp \
+    rectangle.cpp
 
 HEADERS += \
     mainwindow.h \
@@ -23,7 +24,8 @@ HEADERS += \
     canvas.h \
     brush.h \
     circle.h \
-    polygon.h
+    polygon.h \
+    rectangle.h
 
 FORMS += \
     mainwindow.ui

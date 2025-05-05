@@ -5,6 +5,7 @@
 #include <QFileDialog>
 #include <QTextStream>
 #include <QMessageBox>
+#include "rectangle.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -30,6 +31,7 @@ MainWindow::MainWindow(QWidget *parent)
     btnDrawLine = ui->btnDrawLine;
     btnDrawCircle = ui->btnDrawCircle;
     btnDrawPolygon = ui->btnDrawPolygon;
+    btnDrawRectangle = ui->btnDrawRectangle;
     btnResetMode = ui->btnResetMode;
     
     // Get the style buttons
@@ -46,6 +48,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(btnDrawLine, &QPushButton::clicked, this, &MainWindow::onDrawLine);
     connect(btnDrawCircle, &QPushButton::clicked, this, &MainWindow::onDrawCircle);
     connect(btnDrawPolygon, &QPushButton::clicked, this, &MainWindow::onDrawPolygon);
+    connect(btnDrawRectangle, &QPushButton::clicked, this, &MainWindow::onDrawRectangle);
     connect(btnResetMode, &QPushButton::clicked, this, &MainWindow::onResetMode);
     
     // Connect style signals to slots
@@ -75,6 +78,7 @@ void MainWindow::onDrawLine()
     canvas->setPolygonMode(false);
     canvas->setThicknessMode(false);
     canvas->setColorMode(false);
+    canvas->setRectangleMode(false);
     statusLabel->setText("Mode: Line Drawing (Right-click to remove lines)");
 }
 
@@ -86,6 +90,7 @@ void MainWindow::onDrawCircle()
     canvas->setPolygonMode(false);
     canvas->setThicknessMode(false);
     canvas->setColorMode(false);
+    canvas->setRectangleMode(false);
     statusLabel->setText("Mode: Circle Drawing (Right-click to remove circles)");
 }
 
@@ -97,7 +102,20 @@ void MainWindow::onDrawPolygon()
     canvas->setPolygonMode(true);
     canvas->setThicknessMode(false);
     canvas->setColorMode(false);
+    canvas->setRectangleMode(false);
     statusLabel->setText("Mode: Polygon Drawing (Click to add vertices, click near first vertex to close, Right-click to remove)");
+}
+
+void MainWindow::onDrawRectangle()
+{
+    qDebug() << "Rectangle drawing mode activated";
+    canvas->setDrawingMode(false);
+    canvas->setCircleMode(false);
+    canvas->setPolygonMode(false);
+    canvas->setRectangleMode(true);
+    canvas->setThicknessMode(false);
+    canvas->setColorMode(false);
+    statusLabel->setText("Mode: Rectangle Drawing (Right-click to remove rectangles)");
 }
 
 void MainWindow::onResetMode()
@@ -108,6 +126,7 @@ void MainWindow::onResetMode()
     canvas->setPolygonMode(false);
     canvas->setThicknessMode(false);
     canvas->setColorMode(false);
+    canvas->setRectangleMode(false);
     statusLabel->setText("Mode: None");
 }
 
@@ -126,6 +145,7 @@ void MainWindow::onThicken()
     canvas->setPolygonMode(false);
     canvas->setThicknessMode(true);
     canvas->setColorMode(false);
+    canvas->setRectangleMode(false);
     statusLabel->setText("Mode: Thickness (Left-click to increase, Right-click to decrease)");
 }
 
@@ -169,6 +189,15 @@ void MainWindow::onSave()
             << circle->getCenter().y() << " "
             << circle->getRadius() << " "
             << circle->getColor().name() << "\n";
+    }
+    
+    // Save rectangles
+    for (const auto& rect : canvas->getRectangles()) {
+        out << "RECTANGLE "
+            << rect->getVertex(0).x() << " " << rect->getVertex(0).y() << " "
+            << rect->getVertex(2).x() << " " << rect->getVertex(2).y() << " "
+            << rect->getColor().name() << " "
+            << rect->getThickness() << "\n";
     }
     
     // Save polygons
@@ -227,6 +256,17 @@ void MainWindow::onLoad()
             auto newCircle = std::make_unique<Circle>(center, radius);
             newCircle->setColor(color);
             canvas->addCircle(std::move(newCircle));
+        }
+        else if (parts[0] == "RECTANGLE" && parts.size() >= 7) {
+            QPoint corner1(parts[1].toInt(), parts[2].toInt());
+            QPoint corner2(parts[3].toInt(), parts[4].toInt());
+            QColor color(parts[5]);
+            int thickness = parts[6].toInt();
+
+            auto newRect = std::make_unique<Rectangle>(corner1, corner2);
+            newRect->setColor(color);
+            newRect->setThickness(thickness);
+            canvas->addRectangle(std::move(newRect));
         }
         else if (parts[0] == "POLYGON" && parts.size() >= 4) {
             auto newPolygon = std::make_unique<Polygon>();

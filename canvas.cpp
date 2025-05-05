@@ -3,6 +3,7 @@
 #include <QPainter>
 #include <QDebug>
 #include <QColorDialog>
+#include "rectangle.h"
 
 Canvas::Canvas(QWidget *parent)
     : QWidget(parent)
@@ -38,6 +39,11 @@ void Canvas::paintEvent(QPaintEvent *event)
         polygon->draw(painter);
     }
     
+    // Draw all rectangles
+    for (const auto& rect : m_rectangles) {
+        rect->draw(painter);
+    }
+    
     // Draw current line if exists
     if (m_currentLine) {
         m_currentLine->draw(painter);
@@ -51,6 +57,11 @@ void Canvas::paintEvent(QPaintEvent *event)
     // Draw current polygon if exists
     if (m_currentPolygon) {
         m_currentPolygon->draw(painter);
+    }
+    
+    // Draw current rectangle if exists
+    if (m_currentRectangle) {
+        m_currentRectangle->draw(painter);
     }
 }
 
@@ -96,6 +107,18 @@ void Canvas::mousePressEvent(QMouseEvent *event)
                     return;
                 }
             }
+            
+            // Check for rectangle selection
+            for (const auto& rect : m_rectangles) {
+                if (rect->contains(m_lastPoint)) {
+                    QColor color = QColorDialog::getColor(rect->getColor(), this, "Select Color");
+                    if (color.isValid()) {
+                        rect->setColor(color);
+                        update();
+                    }
+                    return;
+                }
+            }
         } else if (m_isDrawing) {
             // Start drawing a new line
             m_currentLine = new Line(m_lastPoint, m_lastPoint);
@@ -104,6 +127,10 @@ void Canvas::mousePressEvent(QMouseEvent *event)
             // Start drawing a new circle
             m_currentCircle = new Circle(m_lastPoint, 0);
             qDebug() << "Started new circle";
+        } else if (m_isRectangleMode) {
+            // Start drawing a new rectangle on first press
+            m_currentRectangle = new Rectangle(m_lastPoint, m_lastPoint);
+            qDebug() << "Started new rectangle";
         } else if (m_isPolygonMode) {
             if (!m_currentPolygon) {
                 // Start a new polygon
@@ -133,7 +160,7 @@ void Canvas::mousePressEvent(QMouseEvent *event)
             }
             update(); // Force update to show the current polygon
         } else if (m_isThicknessMode) {
-            // Check if we clicked on a line or polygon to change thickness
+            // Check if we clicked on a line or polygon or rectangle to change thickness
             for (const auto& line : m_lines) {
                 if (line->contains(m_lastPoint)) {
                     handleThicknessChange(line.get(), true);
@@ -143,6 +170,12 @@ void Canvas::mousePressEvent(QMouseEvent *event)
             for (const auto& polygon : m_polygons) {
                 if (polygon->contains(m_lastPoint)) {
                     handlePolygonThicknessChange(polygon.get(), true);
+                    break;
+                }
+            }
+            for (const auto& rect : m_rectangles) {
+                if (rect->contains(m_lastPoint)) {
+                    handleRectangleThicknessChange(rect.get(), true);
                     break;
                 }
             }
@@ -206,6 +239,34 @@ void Canvas::mousePressEvent(QMouseEvent *event)
                     }
                 }
             }
+
+            // Check for rectangle operations
+            if (!m_selectedPolygon) {
+                for (const auto& rect : m_rectangles) {
+                    int vIdx;
+                    if (rect->isNearVertex(m_lastPoint, vIdx)) {
+                        m_selectedRectangle = rect.get();
+                        m_selectedRectVertexIndex = vIdx;
+                        m_isDraggingRectVertex = true;
+                        qDebug() << "Selected rectangle vertex";
+                        return;
+                    }
+                    int eIdx;
+                    if (rect->isNearEdge(m_lastPoint, eIdx)) {
+                        m_selectedRectangle = rect.get();
+                        m_selectedRectEdgeIndex = eIdx;
+                        m_isDraggingRectEdge = true;
+                        qDebug() << "Selected rectangle edge";
+                        return;
+                    }
+                    if (rect->contains(m_lastPoint)) {
+                        m_selectedRectangle = rect.get();
+                        m_isDraggingRectangle = true;
+                        qDebug() << "Selected rectangle for dragging";
+                        return;
+                    }
+                }
+            }
         }
     } else if (event->button() == Qt::RightButton) {
         if (m_isDrawing) {
@@ -235,8 +296,17 @@ void Canvas::mousePressEvent(QMouseEvent *event)
                     break;
                 }
             }
+        } else if (m_isRectangleMode) {
+            // Remove rectangle
+            for (const auto& rect : m_rectangles) {
+                if (rect->contains(event->pos())) {
+                    removeRectangle(rect.get());
+                    qDebug() << "Rectangle removed";
+                    break;
+                }
+            }
         } else if (m_isThicknessMode) {
-            // Decrease thickness
+            // Decrease thickness lines/polygons/rectangles
             for (const auto& line : m_lines) {
                 if (line->contains(event->pos())) {
                     handleThicknessChange(line.get(), false);
@@ -246,6 +316,12 @@ void Canvas::mousePressEvent(QMouseEvent *event)
             for (const auto& polygon : m_polygons) {
                 if (polygon->contains(event->pos())) {
                     handlePolygonThicknessChange(polygon.get(), false);
+                    break;
+                }
+            }
+            for (const auto& rect : m_rectangles) {
+                if (rect->contains(event->pos())) {
+                    handleRectangleThicknessChange(rect.get(), false);
                     break;
                 }
             }
@@ -307,6 +383,26 @@ void Canvas::mouseMoveEvent(QMouseEvent *event)
         m_selectedPolygon->move(offset);
         m_lastPoint = event->pos();
         update();
+    } else if (m_isRectangleMode && m_currentRectangle) {
+        // Update opposite corner while drawing
+        m_currentRectangle->setOppositeCorner(event->pos());
+        update();
+    } else if (m_isDraggingRectangle && m_selectedRectangle) {
+        // Move the entire rectangle
+        QPoint offset = event->pos() - m_lastPoint;
+        m_selectedRectangle->move(offset);
+        m_lastPoint = event->pos();
+        update();
+    } else if (m_isDraggingRectVertex && m_selectedRectangle) {
+        // Move a rectangle vertex
+        m_selectedRectangle->moveVertex(m_selectedRectVertexIndex, event->pos());
+        update();
+    } else if (m_isDraggingRectEdge && m_selectedRectangle) {
+        // Move rectangle edge
+        QPoint offset = event->pos() - m_lastPoint;
+        m_selectedRectangle->moveEdge(m_selectedRectEdgeIndex, offset);
+        m_lastPoint = event->pos();
+        update();
     }
 }
 
@@ -323,6 +419,11 @@ void Canvas::mouseReleaseEvent(QMouseEvent *event)
             addCircle(std::unique_ptr<Circle>(m_currentCircle));
             m_currentCircle = nullptr;
             qDebug() << "Circle completed and added to circles";
+        } else if (m_isRectangleMode && m_currentRectangle) {
+            // Add completed rectangle
+            addRectangle(std::unique_ptr<Rectangle>(m_currentRectangle));
+            m_currentRectangle = nullptr;
+            qDebug() << "Rectangle completed and added";
         }
         m_isDraggingEndpoint = false;
         m_isDraggingStartPoint = false;
@@ -331,11 +432,16 @@ void Canvas::mouseReleaseEvent(QMouseEvent *event)
         m_isDraggingVertex = false;
         m_isDraggingEdge = false;
         m_isDraggingPolygon = false;
+        m_isDraggingRectVertex = false;
+        m_isDraggingRectEdge = false;
+        m_isDraggingRectangle = false;
         m_selectedLine = nullptr;
         m_selectedCircle = nullptr;
         m_selectedPolygon = nullptr;
         m_selectedVertexIndex = -1;
         m_selectedEdgeIndex = -1;
+        m_selectedRectVertexIndex = -1;
+        m_selectedRectEdgeIndex = -1;
     }
 }
 
@@ -344,6 +450,7 @@ void Canvas::clearCanvas()
     m_lines.clear();
     m_circles.clear();
     m_polygons.clear();
+    m_rectangles.clear();
     update();
 }
 
@@ -398,6 +505,22 @@ void Canvas::removePolygon(Polygon* polygon)
     }
 }
 
+void Canvas::addRectangle(std::unique_ptr<Rectangle> rect)
+{
+    m_rectangles.push_back(std::move(rect));
+    update();
+}
+
+void Canvas::removeRectangle(Rectangle* rect)
+{
+    auto it = std::find_if(m_rectangles.begin(), m_rectangles.end(),
+        [rect](const std::unique_ptr<Rectangle>& r){ return r.get() == rect; });
+    if (it != m_rectangles.end()) {
+        m_rectangles.erase(it);
+        update();
+    }
+}
+
 void Canvas::handleThicknessChange(Line* line, bool increase)
 {
     if (!line) return;
@@ -434,6 +557,16 @@ void Canvas::handleRadiusChange(Circle* circle, const QPoint& newPoint)
     qDebug() << "Circle radius changed to:" << newRadius;
 }
 
+void Canvas::handleRectangleThicknessChange(Rectangle* rect, bool increase)
+{
+    if (!rect) return;
+    int current = rect->getThickness();
+    int newT = increase ? current+1 : std::max(1, current-1);
+    rect->setThickness(newT);
+    update();
+    qDebug() << "Rectangle thickness changed to:" << newT;
+}
+
 void Canvas::setAntiAliasing(bool enabled)
 {
     m_antiAliasing = enabled;
@@ -465,5 +598,13 @@ void Canvas::updateAllObjectsAntiAliasing()
     }
     if (m_currentPolygon) {
         m_currentPolygon->setAntiAliasing(m_antiAliasing);
+    }
+
+    // Update rectangles
+    for (const auto& rect : m_rectangles) {
+        rect->setAntiAliasing(m_antiAliasing);
+    }
+    if (m_currentRectangle) {
+        m_currentRectangle->setAntiAliasing(m_antiAliasing);
     }
 }

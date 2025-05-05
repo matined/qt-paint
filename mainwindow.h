@@ -30,6 +30,7 @@ private:
     QPushButton *btnDrawLine;
     QPushButton *btnDrawCircle;
     QPushButton *btnDrawPolygon;
+    QPushButton *btnDrawRectangle;
     QPushButton *btnResetMode;
     
     // Style buttons
@@ -47,6 +48,7 @@ private slots:
     void onDrawLine();
     void onDrawCircle();
     void onDrawPolygon();
+    void onDrawRectangle();
     void onResetMode();
     
     // Style slots
