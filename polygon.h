@@ -20,6 +20,7 @@ public:
     void setVertex(int index, const QPoint& point);
     QPoint getVertex(int index) const;
     int getVertexCount() const { return m_vertices.size(); }
+    const std::vector<QPoint>& getVertices() const { return m_vertices; }
     bool isNearVertex(const QPoint& point, int& vertexIndex) const;
     bool isNearEdge(const QPoint& point, int& edgeIndex) const;
     

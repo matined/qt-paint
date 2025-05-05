@@ -9,6 +9,7 @@
 #include "circle.h"
 #include "polygon.h"
 #include "rectangle.h"
+#include <unordered_map>
 
 class Canvas : public QWidget
 {
@@ -23,6 +24,7 @@ public:
     void setCircleMode(bool enabled) { m_isCircleMode = enabled; }
     void setPolygonMode(bool enabled) { m_isPolygonMode = enabled; }
     void setRectangleMode(bool enabled) { m_isRectangleMode = enabled; }
+    void setClippingMode(bool enabled) { m_isClippingMode = enabled; }
     void setColorMode(bool enabled) { m_isColorMode = enabled; }
     void setAntiAliasing(bool enabled);
     void clearCanvas();
@@ -53,6 +55,7 @@ private:
     bool m_isCircleMode = false;
     bool m_isPolygonMode = false;
     bool m_isRectangleMode = false;
+    bool m_isClippingMode = false;
     bool m_isColorMode = false;
     bool m_antiAliasing = false;
     Line* m_currentLine = nullptr;
@@ -82,12 +85,17 @@ private:
     int m_selectedEdgeIndex = -1;
     int m_selectedRectVertexIndex = -1;
     int m_selectedRectEdgeIndex = -1;
+    std::vector<Polygon*> m_clipSelections;
+    std::vector<QPoint> m_clipResultVertices;
+    std::unordered_map<Polygon*, QColor> m_clippingOldColors;
     
     void handleThicknessChange(Line* line, bool increase);
     void handleRadiusChange(Circle* circle, const QPoint& newPoint);
     void handlePolygonThicknessChange(Polygon* polygon, bool increase);
     void handleRectangleThicknessChange(Rectangle* rect, bool increase);
     void updateAllObjectsAntiAliasing();
+    void processClippingWithPolygon(Polygon* selectedPolygon);
+    void finalizeClipping();
 };
 
 #endif // CANVAS_H

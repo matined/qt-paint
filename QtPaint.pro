@@ -16,7 +16,8 @@ SOURCES += \
     brush.cpp \
     circle.cpp \
     polygon.cpp \
-    rectangle.cpp
+    rectangle.cpp \
+    clipping.cpp
 
 HEADERS += \
     mainwindow.h \
@@ -25,7 +26,8 @@ HEADERS += \
     brush.h \
     circle.h \
     polygon.h \
-    rectangle.h
+    rectangle.h \
+    clipping.h
 
 FORMS += \
     mainwindow.ui

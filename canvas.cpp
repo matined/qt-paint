@@ -4,6 +4,8 @@
 #include <QDebug>
 #include <QColorDialog>
 #include "rectangle.h"
+#include "clipping.h"
+#include <algorithm>
 
 Canvas::Canvas(QWidget *parent)
     : QWidget(parent)
@@ -67,6 +69,23 @@ void Canvas::paintEvent(QPaintEvent *event)
 
 void Canvas::mousePressEvent(QMouseEvent *event)
 {
+    // First handle clipping mode separately
+    if (m_isClippingMode) {
+        if (event->button() == Qt::LeftButton) {
+            // Left-click to add a polygon to clip chain
+            for (const auto& polygon : m_polygons) {
+                if (polygon->contains(event->pos())) {
+                    processClippingWithPolygon(polygon.get());
+                    return;
+                }
+            }
+        } else if (event->button() == Qt::RightButton) {
+            // Finalize clipping
+            finalizeClipping();
+            return;
+        }
+    }
+
     if (event->button() == Qt::LeftButton) {
         m_lastPoint = event->pos();
         qDebug() << "Mouse press at:" << m_lastPoint;
@@ -607,4 +626,71 @@ void Canvas::updateAllObjectsAntiAliasing()
     if (m_currentRectangle) {
         m_currentRectangle->setAntiAliasing(m_antiAliasing);
     }
+}
+
+// ==== Clipping helper functions ====
+void Canvas::processClippingWithPolygon(Polygon* selectedPolygon)
+{
+    if (!selectedPolygon) return;
+
+    // Avoid adding same polygon twice
+    if (std::find(m_clipSelections.begin(), m_clipSelections.end(), selectedPolygon) != m_clipSelections.end()) {
+        qDebug() << "Polygon already selected for clipping";
+        return;
+    }
+
+    m_clipSelections.push_back(selectedPolygon);
+    qDebug() << "Polygon added to clipping selections. Total:" << m_clipSelections.size();
+
+    // If this is the first polygon, just store its vertices as current result
+    if (m_clipSelections.size() == 1) {
+        m_clipResultVertices = selectedPolygon->getVertices();
+    } else {
+        // Perform clipping of current result with new polygon
+        std::vector<QPoint> clipVertices = selectedPolygon->getVertices();
+        if (!selectedPolygon->isClosed()) {
+            qDebug() << "Clip polygon is not closed. Aborting.";
+            return;
+        }
+
+        m_clipResultVertices = sutherlandHodgman(m_clipResultVertices, clipVertices);
+    }
+
+    // Highlight selected polygon by changing its color temporarily
+    if (m_clippingOldColors.find(selectedPolygon) == m_clippingOldColors.end()) {
+        m_clippingOldColors[selectedPolygon] = selectedPolygon->getColor();
+        selectedPolygon->setColor(Qt::blue);
+    }
+
+    update();
+}
+
+void Canvas::finalizeClipping()
+{
+    if (!m_isClippingMode) return;
+
+    if (m_clipResultVertices.size() >= 3) {
+        // Create new polygon from result vertices
+        auto newPoly = std::make_unique<Polygon>();
+        for (const QPoint& pt : m_clipResultVertices) {
+            newPoly->addVertex(pt);
+        }
+        newPoly->close();
+        newPoly->setColor(Qt::magenta); // highlight new polygon
+        newPoly->setAntiAliasing(m_antiAliasing);
+        addPolygon(std::move(newPoly));
+        qDebug() << "Clipping finalized, new polygon added";
+    } else {
+        qDebug() << "Clipping result has insufficient vertices";
+    }
+
+    // Reset clipping state
+    m_clipSelections.clear();
+    m_clipResultVertices.clear();
+    for (auto& pair : m_clippingOldColors) {
+        pair.first->setColor(pair.second);
+    }
+    m_clippingOldColors.clear();
+    m_isClippingMode = false;
+    update();
 }

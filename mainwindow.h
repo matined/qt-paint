@@ -32,6 +32,7 @@ private:
     QPushButton *btnDrawPolygon;
     QPushButton *btnDrawRectangle;
     QPushButton *btnResetMode;
+    QPushButton *btnClip;
     
     // Style buttons
     QPushButton *btnChangeColor;
@@ -50,6 +51,7 @@ private slots:
     void onDrawPolygon();
     void onDrawRectangle();
     void onResetMode();
+    void onClip();
     
     // Style slots
     void onChangeColor();

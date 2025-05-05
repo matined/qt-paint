@@ -33,6 +33,7 @@ MainWindow::MainWindow(QWidget *parent)
     btnDrawPolygon = ui->btnDrawPolygon;
     btnDrawRectangle = ui->btnDrawRectangle;
     btnResetMode = ui->btnResetMode;
+    btnClip = ui->btnClip;
     
     // Get the style buttons
     btnChangeColor = ui->btnChangeColor;
@@ -50,6 +51,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(btnDrawPolygon, &QPushButton::clicked, this, &MainWindow::onDrawPolygon);
     connect(btnDrawRectangle, &QPushButton::clicked, this, &MainWindow::onDrawRectangle);
     connect(btnResetMode, &QPushButton::clicked, this, &MainWindow::onResetMode);
+    connect(btnClip, &QPushButton::clicked, this, &MainWindow::onClip);
     
     // Connect style signals to slots
     connect(btnChangeColor, &QPushButton::clicked, this, &MainWindow::onChangeColor);
@@ -79,6 +81,7 @@ void MainWindow::onDrawLine()
     canvas->setThicknessMode(false);
     canvas->setColorMode(false);
     canvas->setRectangleMode(false);
+    canvas->setClippingMode(false);
     statusLabel->setText("Mode: Line Drawing (Right-click to remove lines)");
 }
 
@@ -91,6 +94,7 @@ void MainWindow::onDrawCircle()
     canvas->setThicknessMode(false);
     canvas->setColorMode(false);
     canvas->setRectangleMode(false);
+    canvas->setClippingMode(false);
     statusLabel->setText("Mode: Circle Drawing (Right-click to remove circles)");
 }
 
@@ -103,6 +107,7 @@ void MainWindow::onDrawPolygon()
     canvas->setThicknessMode(false);
     canvas->setColorMode(false);
     canvas->setRectangleMode(false);
+    canvas->setClippingMode(false);
     statusLabel->setText("Mode: Polygon Drawing (Click to add vertices, click near first vertex to close, Right-click to remove)");
 }
 
@@ -115,6 +120,7 @@ void MainWindow::onDrawRectangle()
     canvas->setRectangleMode(true);
     canvas->setThicknessMode(false);
     canvas->setColorMode(false);
+    canvas->setClippingMode(false);
     statusLabel->setText("Mode: Rectangle Drawing (Right-click to remove rectangles)");
 }
 
@@ -127,13 +133,28 @@ void MainWindow::onResetMode()
     canvas->setThicknessMode(false);
     canvas->setColorMode(false);
     canvas->setRectangleMode(false);
+    canvas->setClippingMode(false);
     statusLabel->setText("Mode: None");
+}
+
+void MainWindow::onClip()
+{
+    qDebug() << "Clipping mode activated";
+    canvas->setDrawingMode(false);
+    canvas->setCircleMode(false);
+    canvas->setPolygonMode(false);
+    canvas->setRectangleMode(false);
+    canvas->setThicknessMode(false);
+    canvas->setColorMode(false);
+    canvas->setClippingMode(true);
+    statusLabel->setText("Mode: Clipping (Left-click to select subject and clip polygons, Right-click to finalize)");
 }
 
 // Style slots
 void MainWindow::onChangeColor()
 {
     canvas->setColorMode(true);
+    canvas->setClippingMode(false);
     statusLabel->setText("Mode: Color Change (Click on an object to change its color)");
 }
 
@@ -146,6 +167,7 @@ void MainWindow::onThicken()
     canvas->setThicknessMode(true);
     canvas->setColorMode(false);
     canvas->setRectangleMode(false);
+    canvas->setClippingMode(false);
     statusLabel->setText("Mode: Thickness (Left-click to increase, Right-click to decrease)");
 }
 
