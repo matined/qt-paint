@@ -411,4 +411,26 @@ void Polygon::fillWithImage(QPainter& painter) const
     painter.drawImage(bbox, m_fillImage);
 
     painter.restore();
+}
+
+bool Polygon::isConvex() const
+{
+    if (m_vertices.size() < 3 || !m_isClosed) {
+        return false;
+    }
+    bool hasPos = false;
+    bool hasNeg = false;
+    int n = static_cast<int>(m_vertices.size());
+    for (int i = 0; i < n; ++i) {
+        const QPoint& a = m_vertices[i];
+        const QPoint& b = m_vertices[(i + 1) % n];
+        const QPoint& c = m_vertices[(i + 2) % n];
+        int cross = (b.x() - a.x()) * (c.y() - b.y()) - (b.y() - a.y()) * (c.x() - b.x());
+        if (cross > 0) hasPos = true;
+        else if (cross < 0) hasNeg = true;
+        if (hasPos && hasNeg) {
+            return false; // both directions -> concave
+        }
+    }
+    return true;
 } 

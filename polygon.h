@@ -53,6 +53,8 @@ public:
     void setFillImagePath(const QString& path) { m_fillImagePath = path; }
     QString getFillImagePath() const { return m_fillImagePath; }
 
+    bool isConvex() const; // New helper to test convexity
+
 private:
     void drawEdges(QPainter& painter);
     void drawVertices(QPainter& painter);

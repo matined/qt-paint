@@ -681,6 +681,21 @@ void Canvas::processClippingWithPolygon(Polygon* selectedPolygon)
         return;
     }
 
+    // If this is not the first polygon (i.e. it will be used as a clip boundary), ensure it is convex.
+    if (!m_clipSelections.empty() && !selectedPolygon->isConvex()) {
+        qDebug() << "Polygon is not convex – clipping disabled";
+        // Restore colors of any previously highlighted polygons
+        for (auto& pair : m_clippingOldColors) {
+            pair.first->setColor(pair.second);
+        }
+        m_clippingOldColors.clear();
+        m_clipSelections.clear();
+        m_clipResultVertices.clear();
+        m_isClippingMode = false;
+        update();
+        return;
+    }
+
     m_clipSelections.push_back(selectedPolygon);
     qDebug() << "Polygon added to clipping selections. Total:" << m_clipSelections.size();
 

@@ -1,16 +1,16 @@
 #include "clipping.h"
 #include <cmath>
 
-static bool inside(const QPoint& p, const QPoint& edgeStart, const QPoint& edgeEnd)
+static bool inside(const QPoint& p, const QPoint& edgeStart, const QPoint& edgeEnd, int orientationSign)
 {
-    // For convex clip polygon, test if point is on the left side of edge (edgeStart->edgeEnd)
-    // Using cross product (edgeEnd-edgeStart) x (p-edgeStart) >= 0
+    // For convex clip polygon, test if point lies on the inner side of the edge.
+    // orientationSign is +1 for CCW clip polygon, -1 for CW clip polygon.
     int dx1 = edgeEnd.x() - edgeStart.x();
     int dy1 = edgeEnd.y() - edgeStart.y();
     int dx2 = p.x() - edgeStart.x();
     int dy2 = p.y() - edgeStart.y();
     int cross = dx1 * dy2 - dy1 * dx2;
-    return cross >= 0; // on left or on the line
+    return orientationSign * cross >= 0; // inside if on the correct side or on the edge
 }
 
 static QPoint intersect(const QPoint& s, const QPoint& p,
@@ -48,6 +48,15 @@ std::vector<QPoint> sutherlandHodgman(const std::vector<QPoint>& subject,
     if (subject.empty() || clip.size() < 3)
         return {};
 
+    // Determine orientation sign of clip polygon (CCW positive, CW negative)
+    long long area2 = 0;
+    for (size_t i = 0; i < clip.size(); ++i) {
+        const QPoint& a = clip[i];
+        const QPoint& b = clip[(i + 1) % clip.size()];
+        area2 += static_cast<long long>(a.x()) * b.y() - static_cast<long long>(b.x()) * a.y();
+    }
+    int orientationSign = (area2 >= 0) ? 1 : -1;
+
     std::vector<QPoint> output = subject;
 
     for (size_t i = 0; i < clip.size(); ++i) {
@@ -61,8 +70,8 @@ std::vector<QPoint> sutherlandHodgman(const std::vector<QPoint>& subject,
 
         QPoint s = input.back(); // start with the last point in the input polygon
         for (const QPoint& p : input) {
-            if (inside(p, edgeStart, edgeEnd)) {
-                if (inside(s, edgeStart, edgeEnd)) {
+            if (inside(p, edgeStart, edgeEnd, orientationSign)) {
+                if (inside(s, edgeStart, edgeEnd, orientationSign)) {
                     // Case 1: both inside
                     output.push_back(p);
                 } else {
@@ -71,7 +80,7 @@ std::vector<QPoint> sutherlandHodgman(const std::vector<QPoint>& subject,
                     output.push_back(iPt);
                     output.push_back(p);
                 }
-            } else if (inside(s, edgeStart, edgeEnd)) {
+            } else if (inside(s, edgeStart, edgeEnd, orientationSign)) {
                 // Case 2: s inside, p outside
                 QPoint iPt = intersect(s, p, edgeStart, edgeEnd);
                 output.push_back(iPt);
