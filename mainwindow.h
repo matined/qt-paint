@@ -38,6 +38,7 @@ private:
     QPushButton *btnChangeColor;
     QPushButton *btnThicken;
     QPushButton *btnToggleAntiAliasing;
+    QPushButton *btnFill;
     
     // File operation buttons
     QPushButton *btnSave;
@@ -52,6 +53,7 @@ private slots:
     void onDrawRectangle();
     void onResetMode();
     void onClip();
+    void onFill();
     
     // Style slots
     void onChangeColor();

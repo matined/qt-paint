@@ -37,15 +37,24 @@ public:
     std::pair<QPoint, QPoint> getEdgePoints(int edgeIndex) const;
     void moveEdge(int edgeIndex, const QPoint& offset);
 
+    // New fill related APIs
+    void setFilled(bool filled) { m_isFilled = filled; }
+    bool isFilled() const { return m_isFilled; }
+    void setFillColor(const QColor& color) { m_fillColor = color; }
+    QColor getFillColor() const { return m_fillColor; }
+
 private:
     void drawEdges(QPainter& painter);
     void drawVertices(QPainter& painter);
     void drawWithBrush(QPainter& painter, int x, int y);
     void drawWuLine(QPainter& painter, const QPoint& start, const QPoint& end);
+    void fillScanline(QPainter& painter) const;  // Scan-line fill helper
     
     std::vector<QPoint> m_vertices;
     bool m_isClosed = false;
+    bool m_isFilled = false;       // indicates whether polygon should be filled
     QColor m_color = Qt::black;
+    QColor m_fillColor = Qt::yellow; // fill color when m_isFilled is true
     int m_thickness = 1;
     Brush m_brush;
     static const int VERTEX_SIZE = 8; // Size of the vertex squares

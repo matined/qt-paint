@@ -138,6 +138,24 @@ void Canvas::mousePressEvent(QMouseEvent *event)
                     return;
                 }
             }
+        } else if (m_isFillMode) {
+            // Toggle fill or change fill color on polygon click
+            for (const auto& polygon : m_polygons) {
+                if (polygon->contains(m_lastPoint)) {
+                    if (!polygon->isFilled()) {
+                        QColor color = QColorDialog::getColor(Qt::yellow, this, "Select Fill Color");
+                        if (color.isValid()) {
+                            polygon->setFillColor(color);
+                        }
+                        polygon->setFilled(true);
+                    } else {
+                        // already filled: toggle off
+                        polygon->setFilled(false);
+                    }
+                    update();
+                    return;
+                }
+            }
         } else if (m_isDrawing) {
             // Start drawing a new line
             m_currentLine = new Line(m_lastPoint, m_lastPoint);

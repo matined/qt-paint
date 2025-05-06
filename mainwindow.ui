@@ -54,6 +54,13 @@
         </widget>
        </item>
        <item>
+        <widget class="QPushButton" name="btnFill">
+         <property name="text">
+          <string>Fill</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <spacer name="horizontalSpacer">
          <property name="orientation">
           <enum>Qt::Orientation::Horizontal</enum>

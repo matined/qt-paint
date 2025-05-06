@@ -3,6 +3,7 @@
 #include <cmath>
 #include <algorithm>
 #include <QDebug>
+#include <limits>
 
 Polygon::Polygon()
     : m_brush(1)
@@ -17,6 +18,10 @@ void Polygon::setThickness(int thickness)
 
 void Polygon::draw(QPainter& painter)
 {
+    // First fill interior if needed
+    if (m_isFilled) {
+        fillScanline(painter);
+    }
     painter.setPen(QPen(m_color, 1)); // Use 1-pixel pen for brush drawing
     drawEdges(painter);
     drawVertices(painter);
@@ -299,5 +304,82 @@ void Polygon::moveEdge(int edgeIndex, const QPoint& offset)
     // Only move the second vertex if we're not at the last edge of an unclosed polygon
     if (m_isClosed || edgeIndex < static_cast<int>(m_vertices.size()) - 1) {
         m_vertices[nextIndex] += offset;
+    }
+}
+
+// ==== Scan-line fill implementation ====
+void Polygon::fillScanline(QPainter& painter) const
+{
+    if (!m_isClosed || m_vertices.size() < 3)
+        return;
+
+    struct EdgeEntry {
+        int yMax;          // maximum y of the edge
+        double x;          // x intersection with current scanline
+        double invSlope;   // 1/m = dx/dy
+    };
+
+    // Build Edge Table (ET) as a vector indexed by y
+    int minY = std::numeric_limits<int>::max();
+    int maxY = std::numeric_limits<int>::min();
+    for (const auto& v : m_vertices) {
+        minY = std::min(minY, v.y());
+        maxY = std::max(maxY, v.y());
+    }
+    if (minY == maxY) return; // degenerate
+
+    int tableHeight = maxY - minY + 1;
+    std::vector<std::vector<EdgeEntry>> edgeTable(tableHeight);
+
+    auto addEdge = [&](const QPoint& p1, const QPoint& p2) {
+        // Ignore horizontal edges
+        if (p1.y() == p2.y())
+            return;
+        int yMin = p1.y() < p2.y() ? p1.y() : p2.y();
+        int yMaxEdge = p1.y() > p2.y() ? p1.y() : p2.y();
+        double xOfYMin = (p1.y() < p2.y()) ? p1.x() : p2.x();
+        double invSlope = static_cast<double>(p2.x() - p1.x()) / static_cast<double>(p2.y() - p1.y());
+        edgeTable[yMin - minY].push_back({yMaxEdge, xOfYMin, invSlope});
+    };
+
+    for (size_t i = 0; i < m_vertices.size(); ++i) {
+        const QPoint& v1 = m_vertices[i];
+        const QPoint& v2 = m_vertices[(i + 1) % m_vertices.size()];
+        addEdge(v1, v2);
+    }
+
+    // Active Edge Table (AET)
+    std::vector<EdgeEntry> AET;
+
+    // Iterate scanlines from minY to maxY
+    for (int y = minY; y <= maxY; ++y) {
+        // 1. Move edges starting at y into AET
+        const auto& bucket = edgeTable[y - minY];
+        AET.insert(AET.end(), bucket.begin(), bucket.end());
+
+        // 2. Remove from AET edges where y == yMax
+        AET.erase(std::remove_if(AET.begin(), AET.end(), [y](const EdgeEntry& e) {
+            return e.yMax == y;
+        }), AET.end());
+
+        // 3. Sort AET by current x
+        std::sort(AET.begin(), AET.end(), [](const EdgeEntry& a, const EdgeEntry& b) {
+            return a.x < b.x;
+        });
+
+        // 4. Fill pixels between pairs of intersections
+        painter.setPen(QPen(m_fillColor, 1));
+        for (size_t i = 0; i + 1 < AET.size(); i += 2) {
+            int xStart = static_cast<int>(std::ceil(AET[i].x));
+            int xEnd   = static_cast<int>(std::floor(AET[i + 1].x));
+            if (xEnd >= xStart) {
+                painter.drawLine(xStart, y, xEnd, y);
+            }
+        }
+
+        // 5. Increment y; handled by loop; 6. For each edge in AET, update x += invSlope
+        for (auto& edge : AET) {
+            edge.x += edge.invSlope;
+        }
     }
 } 

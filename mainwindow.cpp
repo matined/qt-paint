@@ -34,6 +34,7 @@ MainWindow::MainWindow(QWidget *parent)
     btnDrawRectangle = ui->btnDrawRectangle;
     btnResetMode = ui->btnResetMode;
     btnClip = ui->btnClip;
+    btnFill = ui->btnFill;
     
     // Get the style buttons
     btnChangeColor = ui->btnChangeColor;
@@ -52,6 +53,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(btnDrawRectangle, &QPushButton::clicked, this, &MainWindow::onDrawRectangle);
     connect(btnResetMode, &QPushButton::clicked, this, &MainWindow::onResetMode);
     connect(btnClip, &QPushButton::clicked, this, &MainWindow::onClip);
+    connect(btnFill, &QPushButton::clicked, this, &MainWindow::onFill);
     
     // Connect style signals to slots
     connect(btnChangeColor, &QPushButton::clicked, this, &MainWindow::onChangeColor);
@@ -82,6 +84,7 @@ void MainWindow::onDrawLine()
     canvas->setColorMode(false);
     canvas->setRectangleMode(false);
     canvas->setClippingMode(false);
+    canvas->setFillMode(false);
     statusLabel->setText("Mode: Line Drawing (Right-click to remove lines)");
 }
 
@@ -95,6 +98,7 @@ void MainWindow::onDrawCircle()
     canvas->setColorMode(false);
     canvas->setRectangleMode(false);
     canvas->setClippingMode(false);
+    canvas->setFillMode(false);
     statusLabel->setText("Mode: Circle Drawing (Right-click to remove circles)");
 }
 
@@ -108,6 +112,7 @@ void MainWindow::onDrawPolygon()
     canvas->setColorMode(false);
     canvas->setRectangleMode(false);
     canvas->setClippingMode(false);
+    canvas->setFillMode(false);
     statusLabel->setText("Mode: Polygon Drawing (Click to add vertices, click near first vertex to close, Right-click to remove)");
 }
 
@@ -121,6 +126,7 @@ void MainWindow::onDrawRectangle()
     canvas->setThicknessMode(false);
     canvas->setColorMode(false);
     canvas->setClippingMode(false);
+    canvas->setFillMode(false);
     statusLabel->setText("Mode: Rectangle Drawing (Right-click to remove rectangles)");
 }
 
@@ -134,6 +140,7 @@ void MainWindow::onResetMode()
     canvas->setColorMode(false);
     canvas->setRectangleMode(false);
     canvas->setClippingMode(false);
+    canvas->setFillMode(false);
     statusLabel->setText("Mode: None");
 }
 
@@ -147,7 +154,22 @@ void MainWindow::onClip()
     canvas->setThicknessMode(false);
     canvas->setColorMode(false);
     canvas->setClippingMode(true);
+    canvas->setFillMode(false);
     statusLabel->setText("Mode: Clipping (Left-click to select subject and clip polygons, Right-click to finalize)");
+}
+
+void MainWindow::onFill()
+{
+    qDebug() << "Fill polygon mode activated";
+    canvas->setDrawingMode(false);
+    canvas->setCircleMode(false);
+    canvas->setPolygonMode(false);
+    canvas->setRectangleMode(false);
+    canvas->setThicknessMode(false);
+    canvas->setColorMode(false);
+    canvas->setClippingMode(false);
+    canvas->setFillMode(true);
+    statusLabel->setText("Mode: Fill Polygon (Click on polygon to toggle fill)");
 }
 
 // Style slots
@@ -155,6 +177,7 @@ void MainWindow::onChangeColor()
 {
     canvas->setColorMode(true);
     canvas->setClippingMode(false);
+    canvas->setFillMode(false);
     statusLabel->setText("Mode: Color Change (Click on an object to change its color)");
 }
 
@@ -168,6 +191,7 @@ void MainWindow::onThicken()
     canvas->setColorMode(false);
     canvas->setRectangleMode(false);
     canvas->setClippingMode(false);
+    canvas->setFillMode(false);
     statusLabel->setText("Mode: Thickness (Left-click to increase, Right-click to decrease)");
 }
 
@@ -231,7 +255,9 @@ void MainWindow::onSave()
         }
         out << polygon->getColor().name() << " "
             << polygon->getThickness() << " "
-            << (polygon->isClosed() ? "1" : "0") << "\n";
+            << (polygon->isClosed() ? "1" : "0") << " "
+            << (polygon->isFilled() ? "1" : "0") << " "
+            << polygon->getFillColor().name() << "\n";
     }
 
     file.close();
@@ -295,7 +321,9 @@ void MainWindow::onLoad()
             int i = 1;
             
             // Read vertices (pairs of x,y coordinates)
-            while (i + 1 < parts.size() - 3) {
+            int minTail = 5; // color thickness closed filled fillColor
+            if (parts.size() < i + 1 + minTail) minTail = 3; // only color thickness closed present
+            while (i + 1 < parts.size() - minTail) {
                 QPoint vertex(parts[i].toInt(), parts[i+1].toInt());
                 newPolygon->addVertex(vertex);
                 i += 2;
@@ -305,13 +333,27 @@ void MainWindow::onLoad()
             QColor color(parts[i]);
             int thickness = parts[i+1].toInt();
             bool isClosed = parts[i+2].toInt() == 1;
-            
+            bool isFilled = false;
+            QColor fillColor;
+            if (parts.size() > i+3) {
+                isFilled = parts[i+3].toInt() == 1;
+            }
+            if (parts.size() > i+4) {
+                fillColor = QColor(parts[i+4]);
+            }
+
             newPolygon->setColor(color);
             newPolygon->setThickness(thickness);
             if (isClosed) {
                 newPolygon->close();
             }
-            
+            if (isFilled) {
+                newPolygon->setFilled(true);
+                if (fillColor.isValid()) {
+                    newPolygon->setFillColor(fillColor);
+                }
+            }
+
             canvas->addPolygon(std::move(newPolygon));
         }
     }

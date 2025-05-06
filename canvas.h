@@ -26,6 +26,7 @@ public:
     void setRectangleMode(bool enabled) { m_isRectangleMode = enabled; }
     void setClippingMode(bool enabled) { m_isClippingMode = enabled; }
     void setColorMode(bool enabled) { m_isColorMode = enabled; }
+    void setFillMode(bool enabled) { m_isFillMode = enabled; }
     void setAntiAliasing(bool enabled);
     void clearCanvas();
     void addLine(std::unique_ptr<Line> line);
@@ -57,6 +58,7 @@ private:
     bool m_isRectangleMode = false;
     bool m_isClippingMode = false;
     bool m_isColorMode = false;
+    bool m_isFillMode = false;
     bool m_antiAliasing = false;
     Line* m_currentLine = nullptr;
     Circle* m_currentCircle = nullptr;
