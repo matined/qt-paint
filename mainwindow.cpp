@@ -6,6 +6,7 @@
 #include <QTextStream>
 #include <QMessageBox>
 #include "rectangle.h"
+#include <QImage>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -35,6 +36,7 @@ MainWindow::MainWindow(QWidget *parent)
     btnResetMode = ui->btnResetMode;
     btnClip = ui->btnClip;
     btnFill = ui->btnFill;
+    btnImageFill = ui->btnImageFill;
     
     // Get the style buttons
     btnChangeColor = ui->btnChangeColor;
@@ -54,6 +56,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(btnResetMode, &QPushButton::clicked, this, &MainWindow::onResetMode);
     connect(btnClip, &QPushButton::clicked, this, &MainWindow::onClip);
     connect(btnFill, &QPushButton::clicked, this, &MainWindow::onFill);
+    connect(btnImageFill, &QPushButton::clicked, this, &MainWindow::onImageFill);
     
     // Connect style signals to slots
     connect(btnChangeColor, &QPushButton::clicked, this, &MainWindow::onChangeColor);
@@ -85,6 +88,7 @@ void MainWindow::onDrawLine()
     canvas->setRectangleMode(false);
     canvas->setClippingMode(false);
     canvas->setFillMode(false);
+    canvas->setImageFillMode(false);
     statusLabel->setText("Mode: Line Drawing (Right-click to remove lines)");
 }
 
@@ -99,6 +103,7 @@ void MainWindow::onDrawCircle()
     canvas->setRectangleMode(false);
     canvas->setClippingMode(false);
     canvas->setFillMode(false);
+    canvas->setImageFillMode(false);
     statusLabel->setText("Mode: Circle Drawing (Right-click to remove circles)");
 }
 
@@ -113,6 +118,7 @@ void MainWindow::onDrawPolygon()
     canvas->setRectangleMode(false);
     canvas->setClippingMode(false);
     canvas->setFillMode(false);
+    canvas->setImageFillMode(false);
     statusLabel->setText("Mode: Polygon Drawing (Click to add vertices, click near first vertex to close, Right-click to remove)");
 }
 
@@ -127,6 +133,7 @@ void MainWindow::onDrawRectangle()
     canvas->setColorMode(false);
     canvas->setClippingMode(false);
     canvas->setFillMode(false);
+    canvas->setImageFillMode(false);
     statusLabel->setText("Mode: Rectangle Drawing (Right-click to remove rectangles)");
 }
 
@@ -141,6 +148,7 @@ void MainWindow::onResetMode()
     canvas->setRectangleMode(false);
     canvas->setClippingMode(false);
     canvas->setFillMode(false);
+    canvas->setImageFillMode(false);
     statusLabel->setText("Mode: None");
 }
 
@@ -155,6 +163,7 @@ void MainWindow::onClip()
     canvas->setColorMode(false);
     canvas->setClippingMode(true);
     canvas->setFillMode(false);
+    canvas->setImageFillMode(false);
     statusLabel->setText("Mode: Clipping (Left-click to select subject and clip polygons, Right-click to finalize)");
 }
 
@@ -169,7 +178,23 @@ void MainWindow::onFill()
     canvas->setColorMode(false);
     canvas->setClippingMode(false);
     canvas->setFillMode(true);
+    canvas->setImageFillMode(false);
     statusLabel->setText("Mode: Fill Polygon (Click on polygon to toggle fill)");
+}
+
+void MainWindow::onImageFill()
+{
+    qDebug() << "Image fill mode activated";
+    canvas->setDrawingMode(false);
+    canvas->setCircleMode(false);
+    canvas->setPolygonMode(false);
+    canvas->setRectangleMode(false);
+    canvas->setThicknessMode(false);
+    canvas->setColorMode(false);
+    canvas->setClippingMode(false);
+    canvas->setFillMode(false);
+    canvas->setImageFillMode(true);
+    statusLabel->setText("Mode: Image Fill (Click on polygon to select fill image)");
 }
 
 // Style slots
@@ -192,6 +217,7 @@ void MainWindow::onThicken()
     canvas->setRectangleMode(false);
     canvas->setClippingMode(false);
     canvas->setFillMode(false);
+    canvas->setImageFillMode(false);
     statusLabel->setText("Mode: Thickness (Left-click to increase, Right-click to decrease)");
 }
 
@@ -257,7 +283,9 @@ void MainWindow::onSave()
             << polygon->getThickness() << " "
             << (polygon->isClosed() ? "1" : "0") << " "
             << (polygon->isFilled() ? "1" : "0") << " "
-            << polygon->getFillColor().name() << "\n";
+            << polygon->getFillColor().name() << " "
+            << (polygon->isImageFilled() ? "1" : "0") << " "
+            << polygon->getFillImagePath() << "\n";
     }
 
     file.close();
@@ -319,41 +347,45 @@ void MainWindow::onLoad()
         else if (parts[0] == "POLYGON" && parts.size() >= 4) {
             auto newPolygon = std::make_unique<Polygon>();
             int i = 1;
-            
-            // Read vertices (pairs of x,y coordinates)
-            int minTail = 5; // color thickness closed filled fillColor
-            if (parts.size() < i + 1 + minTail) minTail = 3; // only color thickness closed present
-            while (i + 1 < parts.size() - minTail) {
+            while (i + 1 < parts.size()) {
+                // Need to parse until color token (#)
+                if (parts[i].startsWith("#")) break;
                 QPoint vertex(parts[i].toInt(), parts[i+1].toInt());
                 newPolygon->addVertex(vertex);
                 i += 2;
             }
-            
-            // Read color, thickness, and closed status
+            if (i >= parts.size() - 1) {
+                continue; // malformed
+            }
             QColor color(parts[i]);
             int thickness = parts[i+1].toInt();
             bool isClosed = parts[i+2].toInt() == 1;
-            bool isFilled = false;
-            QColor fillColor;
-            if (parts.size() > i+3) {
-                isFilled = parts[i+3].toInt() == 1;
+            bool isFilled = parts[i+3].toInt() == 1;
+            QColor fillColor(parts[i+4]);
+            bool isImageFilled = false;
+            QString imagePath;
+            if (parts.size() > i+5) {
+                isImageFilled = parts[i+5].toInt() == 1;
             }
-            if (parts.size() > i+4) {
-                fillColor = QColor(parts[i+4]);
+            if (parts.size() > i+6) {
+                // Remaining tokens after i+6 should be path maybe containing spaces? We assume no spaces here.
+                imagePath = parts[i+6];
             }
-
             newPolygon->setColor(color);
             newPolygon->setThickness(thickness);
-            if (isClosed) {
-                newPolygon->close();
-            }
+            if (isClosed) newPolygon->close();
             if (isFilled) {
                 newPolygon->setFilled(true);
-                if (fillColor.isValid()) {
-                    newPolygon->setFillColor(fillColor);
+                newPolygon->setFillColor(fillColor);
+            }
+            if (isImageFilled && !imagePath.isEmpty()) {
+                QImage img(imagePath);
+                if (!img.isNull()) {
+                    newPolygon->setFillImage(img);
+                    newPolygon->setImageFilled(true);
+                    newPolygon->setFillImagePath(imagePath);
                 }
             }
-
             canvas->addPolygon(std::move(newPolygon));
         }
     }

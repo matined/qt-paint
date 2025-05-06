@@ -4,6 +4,9 @@
 #include <algorithm>
 #include <QDebug>
 #include <limits>
+#include <QPainterPath>
+#include <QImage>
+#include <QString>
 
 Polygon::Polygon()
     : m_brush(1)
@@ -19,7 +22,9 @@ void Polygon::setThickness(int thickness)
 void Polygon::draw(QPainter& painter)
 {
     // First fill interior if needed
-    if (m_isFilled) {
+    if (m_isImageFilled && !m_fillImage.isNull()) {
+        fillWithImage(painter);
+    } else if (m_isFilled) {
         fillScanline(painter);
     }
     painter.setPen(QPen(m_color, 1)); // Use 1-pixel pen for brush drawing
@@ -382,4 +387,28 @@ void Polygon::fillScanline(QPainter& painter) const
             edge.x += edge.invSlope;
         }
     }
+}
+
+// ==== Image fill implementation ====
+void Polygon::fillWithImage(QPainter& painter) const
+{
+    if (!m_isClosed || m_vertices.size() < 3 || m_fillImage.isNull())
+        return;
+
+    // Build path
+    QPainterPath path;
+    path.moveTo(m_vertices[0]);
+    for (size_t i = 1; i < m_vertices.size(); ++i) {
+        path.lineTo(m_vertices[i]);
+    }
+    path.closeSubpath();
+
+    painter.save();
+    painter.setClipPath(path);
+
+    // Choose bounding rect to draw image (scaled to fit)
+    QRectF bbox = path.boundingRect();
+    painter.drawImage(bbox, m_fillImage);
+
+    painter.restore();
 } 

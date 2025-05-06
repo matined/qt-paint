@@ -6,6 +6,8 @@
 #include <QPoint>
 #include <vector>
 #include "brush.h"
+#include <QImage>
+#include <QString>
 
 class Polygon {
 public:
@@ -43,18 +45,30 @@ public:
     void setFillColor(const QColor& color) { m_fillColor = color; }
     QColor getFillColor() const { return m_fillColor; }
 
+    // Image fill APIs
+    void setImageFilled(bool filled) { m_isImageFilled = filled; }
+    bool isImageFilled() const { return m_isImageFilled; }
+    void setFillImage(const QImage& image) { m_fillImage = image; }
+    const QImage& getFillImage() const { return m_fillImage; }
+    void setFillImagePath(const QString& path) { m_fillImagePath = path; }
+    QString getFillImagePath() const { return m_fillImagePath; }
+
 private:
     void drawEdges(QPainter& painter);
     void drawVertices(QPainter& painter);
     void drawWithBrush(QPainter& painter, int x, int y);
     void drawWuLine(QPainter& painter, const QPoint& start, const QPoint& end);
     void fillScanline(QPainter& painter) const;  // Scan-line fill helper
+    void fillWithImage(QPainter& painter) const; // New image fill helper
     
     std::vector<QPoint> m_vertices;
     bool m_isClosed = false;
-    bool m_isFilled = false;       // indicates whether polygon should be filled
+    bool m_isFilled = false;       // indicates whether polygon should be filled with solid color
+    bool m_isImageFilled = false;  // indicates whether polygon should be filled with image
     QColor m_color = Qt::black;
     QColor m_fillColor = Qt::yellow; // fill color when m_isFilled is true
+    QImage m_fillImage;              // image when m_isImageFilled is true
+    QString m_fillImagePath;         // optional: path of the fill image
     int m_thickness = 1;
     Brush m_brush;
     static const int VERTEX_SIZE = 8; // Size of the vertex squares

@@ -6,6 +6,8 @@
 #include "rectangle.h"
 #include "clipping.h"
 #include <algorithm>
+#include <QFileDialog>
+#include <QImage>
 
 Canvas::Canvas(QWidget *parent)
     : QWidget(parent)
@@ -151,6 +153,28 @@ void Canvas::mousePressEvent(QMouseEvent *event)
                     } else {
                         // already filled: toggle off
                         polygon->setFilled(false);
+                    }
+                    update();
+                    return;
+                }
+            }
+        } else if (m_isImageFillMode) {
+            // Fill polygon with image
+            for (const auto& polygon : m_polygons) {
+                if (polygon->contains(m_lastPoint)) {
+                    QString imgPath = QFileDialog::getOpenFileName(this, "Select Fill Image", "", "Image Files (*.png *.jpg *.bmp)");
+                    if (!imgPath.isEmpty()) {
+                        QImage img(imgPath);
+                        if (!img.isNull()) {
+                            polygon->setFillImage(img);
+                            polygon->setImageFilled(true);
+                            polygon->setFillImagePath(imgPath);
+                        }
+                    } else {
+                        // toggle off image fill if already on
+                        if (polygon->isImageFilled()) {
+                            polygon->setImageFilled(false);
+                        }
                     }
                     update();
                     return;
