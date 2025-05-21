@@ -8,6 +8,7 @@
 #include "brush.h"
 #include <QImage>
 #include <QString>
+#include <QRect>
 
 class Polygon {
 public:
@@ -55,6 +56,10 @@ public:
 
     bool isConvex() const; // New helper to test convexity
 
+    // Flood Fill API
+    void applyFloodFill(const QPoint& clickPoint, int canvasWidth, int canvasHeight);
+    bool hasFloodFill() const { return m_hasFloodFill; }
+
 private:
     void drawEdges(QPainter& painter);
     void drawVertices(QPainter& painter);
@@ -73,6 +78,8 @@ private:
     QString m_fillImagePath;         // optional: path of the fill image
     int m_thickness = 1;
     Brush m_brush;
+    QImage m_floodFillLayer;      // For flood fill
+    bool m_hasFloodFill = false;  // Flag for flood fill
     static const int VERTEX_SIZE = 8; // Size of the vertex squares
 };
 

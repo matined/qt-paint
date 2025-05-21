@@ -40,6 +40,7 @@ private:
     QPushButton *btnToggleAntiAliasing;
     QPushButton *btnFill;
     QPushButton *btnImageFill;
+    QPushButton *btnFloodFill;
     
     // File operation buttons
     QPushButton *btnSave;
@@ -56,6 +57,7 @@ private slots:
     void onClip();
     void onFill();
     void onImageFill();
+    void onFloodFill();
     
     // Style slots
     void onChangeColor();

@@ -68,6 +68,13 @@
         </widget>
        </item>
        <item>
+        <widget class="QPushButton" name="btnFloodFill">
+         <property name="text">
+          <string>Flood Fill</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <spacer name="horizontalSpacer">
          <property name="orientation">
           <enum>Qt::Orientation::Horizontal</enum>

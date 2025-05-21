@@ -180,6 +180,14 @@ void Canvas::mousePressEvent(QMouseEvent *event)
                     return;
                 }
             }
+        } else if (m_isFloodFillMode) {
+            for (const auto& polygon : m_polygons) {
+                if (polygon->contains(m_lastPoint)) {
+                    polygon->applyFloodFill(m_lastPoint, width(), height());
+                    update();
+                    return;
+                }
+            }
         } else if (m_isDrawing) {
             // Start drawing a new line
             m_currentLine = new Line(m_lastPoint, m_lastPoint);

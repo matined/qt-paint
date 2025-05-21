@@ -7,6 +7,7 @@
 #include <QPainterPath>
 #include <QImage>
 #include <QString>
+#include <QQueue>
 
 Polygon::Polygon()
     : m_brush(1)
@@ -27,6 +28,12 @@ void Polygon::draw(QPainter& painter)
     } else if (m_isFilled) {
         fillScanline(painter);
     }
+
+    // Draw flood fill layer if it exists
+    if (m_hasFloodFill && !m_floodFillLayer.isNull()) {
+        painter.drawImage(0, 0, m_floodFillLayer);
+    }
+
     painter.setPen(QPen(m_color, 1)); // Use 1-pixel pen for brush drawing
     drawEdges(painter);
     drawVertices(painter);
@@ -283,6 +290,8 @@ void Polygon::move(const QPoint& offset)
     for (auto& vertex : m_vertices) {
         vertex += offset;
     }
+    m_hasFloodFill = false; // Invalidate flood fill
+    m_floodFillLayer = QImage();
 }
 
 std::pair<QPoint, QPoint> Polygon::getEdgePoints(int edgeIndex) const
@@ -310,6 +319,8 @@ void Polygon::moveEdge(int edgeIndex, const QPoint& offset)
     if (m_isClosed || edgeIndex < static_cast<int>(m_vertices.size()) - 1) {
         m_vertices[nextIndex] += offset;
     }
+    m_hasFloodFill = false; // Invalidate flood fill
+    m_floodFillLayer = QImage();
 }
 
 // ==== Scan-line fill implementation ====
@@ -433,4 +444,64 @@ bool Polygon::isConvex() const
         }
     }
     return true;
+}
+
+void Polygon::applyFloodFill(const QPoint& clickPoint, int canvasWidth, int canvasHeight) {
+    if (!m_isClosed || m_vertices.size() < 3) return;
+
+    if (m_floodFillLayer.isNull() || m_floodFillLayer.width() != canvasWidth || m_floodFillLayer.height() != canvasHeight) {
+        m_floodFillLayer = QImage(canvasWidth, canvasHeight, QImage::Format_ARGB32_Premultiplied);
+    }
+    m_floodFillLayer.fill(Qt::transparent);
+
+    QPainter imagePainter(&m_floodFillLayer);
+    QPen boundaryPen(Qt::black, 1, Qt::SolidLine, Qt::FlatCap, Qt::MiterJoin);
+    imagePainter.setPen(boundaryPen);
+    imagePainter.setRenderHint(QPainter::Antialiasing, false);
+
+    for (size_t i = 0; i < m_vertices.size(); ++i) {
+        const QPoint& start = m_vertices[i];
+        const QPoint& end = m_vertices[(i + 1) % m_vertices.size()];
+        if (!m_isClosed && i == m_vertices.size() - 1) break; 
+        imagePainter.drawLine(start, end);
+    }
+    imagePainter.end();
+
+    if (clickPoint.x() < 0 || clickPoint.x() >= canvasWidth ||
+        clickPoint.y() < 0 || clickPoint.y() >= canvasHeight) {
+        qDebug() << "Flood fill click point out of canvas bounds.";
+        return;
+    }
+
+    QRgb black = qRgb(0, 0, 0);
+    if (m_floodFillLayer.pixel(clickPoint) == black) {
+        qDebug() << "Flood fill click point is on a boundary. No fill performed.";
+        return;
+    }
+
+    QQueue<QPoint> queue;
+    queue.enqueue(clickPoint);
+
+    while (!queue.isEmpty()) {
+        QPoint p = queue.dequeue();
+
+        if (p.x() < 0 || p.x() >= m_floodFillLayer.width() ||
+            p.y() < 0 || p.y() >= m_floodFillLayer.height()) {
+            continue;
+        }
+
+        if (m_floodFillLayer.pixel(p) != black) {
+            m_floodFillLayer.setPixel(p, black);
+
+            if (p.x() - 1 >= 0) {
+                queue.enqueue(QPoint(p.x() - 1, p.y()));
+            }
+            if (p.y() + 1 < m_floodFillLayer.height()) {
+                queue.enqueue(QPoint(p.x(), p.y() + 1));
+            }
+        }
+    }
+
+    m_hasFloodFill = true;
+    qDebug() << "Flood fill applied from" << clickPoint;
 } 

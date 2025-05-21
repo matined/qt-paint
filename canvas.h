@@ -28,6 +28,7 @@ public:
     void setColorMode(bool enabled) { m_isColorMode = enabled; }
     void setFillMode(bool enabled) { m_isFillMode = enabled; }
     void setImageFillMode(bool enabled) { m_isImageFillMode = enabled; }
+    void setFloodFillMode(bool enabled) { m_isFloodFillMode = enabled; }
     void setAntiAliasing(bool enabled);
     void clearCanvas();
     void addLine(std::unique_ptr<Line> line);
@@ -61,6 +62,7 @@ private:
     bool m_isColorMode = false;
     bool m_isFillMode = false;
     bool m_isImageFillMode = false;
+    bool m_isFloodFillMode = false;
     bool m_antiAliasing = false;
     Line* m_currentLine = nullptr;
     Circle* m_currentCircle = nullptr;
